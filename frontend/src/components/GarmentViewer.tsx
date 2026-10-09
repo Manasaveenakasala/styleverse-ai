@@ -1,3 +1,5 @@
+
+import { useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 
@@ -8,10 +10,18 @@ type GarmentViewerProps = {
   garment: GarmentType
 }
 
+// Shared fabric material
 function Fabric({ color }: { color: string }) {
-  return <meshStandardMaterial color={color} roughness={0.85} />
+  return (
+    <meshStandardMaterial
+      color={color}
+      roughness={0.85}
+      metalness={0.05}
+    />
+  )
 }
 
+// Shirt model
 function Shirt({ color }: { color: string }) {
   return (
     <group>
@@ -20,12 +30,18 @@ function Shirt({ color }: { color: string }) {
         <Fabric color={color} />
       </mesh>
 
-      <mesh position={[-1.05, 0.55, 0]} rotation={[0, 0, -0.4]}>
+      <mesh
+        position={[-1.05, 0.55, 0]}
+        rotation={[0, 0, -0.4]}
+      >
         <boxGeometry args={[0.75, 0.6, 0.4]} />
         <Fabric color={color} />
       </mesh>
 
-      <mesh position={[1.05, 0.55, 0]} rotation={[0, 0, 0.4]}>
+      <mesh
+        position={[1.05, 0.55, 0]}
+        rotation={[0, 0, 0.4]}
+      >
         <boxGeometry args={[0.75, 0.6, 0.4]} />
         <Fabric color={color} />
       </mesh>
@@ -33,6 +49,7 @@ function Shirt({ color }: { color: string }) {
   )
 }
 
+// Dress model
 function Dress({ color }: { color: string }) {
   return (
     <group>
@@ -49,6 +66,7 @@ function Dress({ color }: { color: string }) {
   )
 }
 
+// Jacket model
 function Jacket({ color }: { color: string }) {
   return (
     <group>
@@ -62,6 +80,7 @@ function Jacket({ color }: { color: string }) {
   )
 }
 
+// Skirt model
 function Skirt({ color }: { color: string }) {
   return (
     <mesh position={[0, -0.3, 0]}>
@@ -71,6 +90,7 @@ function Skirt({ color }: { color: string }) {
   )
 }
 
+// Pants model
 function Pants({ color }: { color: string }) {
   return (
     <group>
@@ -92,40 +112,90 @@ function Pants({ color }: { color: string }) {
   )
 }
 
-function GarmentModel({ garment, color }: GarmentViewerProps) {
+// Select the correct garment model
+function GarmentModel({
+  garment,
+  color,
+}: GarmentViewerProps) {
   switch (garment) {
     case 'Dress':
       return <Dress color={color} />
+
     case 'Jacket':
       return <Jacket color={color} />
+
     case 'Skirt':
       return <Skirt color={color} />
+
     case 'Pants':
       return <Pants color={color} />
+
     case 'Shirt':
     default:
       return <Shirt color={color} />
   }
 }
 
+// Main interactive 3D viewer
 export default function GarmentViewer({
   color,
   garment,
 }: GarmentViewerProps) {
+  const [autoRotate, setAutoRotate] = useState(false)
+
+  function toggleRotation() {
+    setAutoRotate((previous) => !previous)
+  }
+
   return (
-    <div className="garment-viewer">
-      <Canvas camera={{ position: [0, 1, 5.5], fov: 45 }}>
-        <ambientLight intensity={1.5} />
-        <directionalLight position={[5, 5, 5]} intensity={2} />
+    <div className="garment-viewer-container">
+      <div className="garment-viewer">
+        <Canvas
+          camera={{
+            position: [0, 1, 5.5],
+            fov: 45,
+          }}
+        >
+          {/* Scene lighting */}
+          <ambientLight intensity={1.5} />
 
-        <GarmentModel garment={garment} color={color} />
+          <directionalLight
+            position={[5, 5, 5]}
+            intensity={2}
+          />
 
-        <OrbitControls
-          enablePan={false}
-          minDistance={3}
-          maxDistance={8}
-        />
-      </Canvas>
+          <directionalLight
+            position={[-4, 2, -3]}
+            intensity={0.7}
+          />
+
+          {/* Selected garment */}
+          <GarmentModel
+            garment={garment}
+            color={color}
+          />
+
+          {/* Camera controls */}
+          <OrbitControls
+            enablePan={false}
+            enableZoom={true}
+            minDistance={3}
+            maxDistance={8}
+            autoRotate={autoRotate}
+            autoRotateSpeed={1.5}
+          />
+        </Canvas>
+      </div>
+
+      {/* Auto-rotation toggle */}
+      <button
+        type="button"
+        className="rotation-button"
+        onClick={toggleRotation}
+        aria-pressed={autoRotate}
+      >
+        {autoRotate ? 'Stop Rotation' : 'Auto Rotate'}
+      </button>
     </div>
   )
 }

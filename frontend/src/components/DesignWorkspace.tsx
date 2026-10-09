@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import GarmentViewer from './GarmentViewer'
 
 const garmentOptions = ['Dress', 'Jacket', 'Shirt', 'Skirt', 'Pants']
 
@@ -69,7 +70,8 @@ function handleGenerate() {
       <div className="design-preview">
         <span className="eyebrow">DESIGN PREVIEW</span>
         <div className="preview-canvas">
-          <div className="garment-swatch" style={{ backgroundColor: color }}>
+          <div>
+          <GarmentViewer color={color} />
             ✦
           </div>
           <h3>{garment}</h3>

@@ -318,4 +318,17 @@ footer {
   }
 }
 
+.garment-viewer {
+  width: 100%;
+  height: 350px;
+  margin: 0 auto 24px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f8f0f5, #e9dbe5);
+  overflow: hidden;
+}
+
+.garment-viewer canvas {
+  display: block;
+}
+
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import DesignWorkspace from './components/DesignWorkspace'
 
 function App() {
   const [backendStatus, setBackendStatus] = useState('Connecting...')
@@ -74,11 +75,9 @@ function App() {
           </div>
         </section>
 
-        <section className="workspace" id="workspace">
-          <h2>Your design journey starts here</h2>
-          <p>The interactive fashion workspace is coming next.</p>
-          <span className="coming-soon">WORKSPACE COMING SOON</span>
-        </section>
+       <section className="workspace" id="workspace">
+          <DesignWorkspace />
+      </section>
 
         <section className="about" id="about">
           <h2>About StyleVerse AI</h2>

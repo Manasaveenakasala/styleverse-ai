@@ -232,4 +232,90 @@ footer {
   .feature-grid {
     grid-template-columns: 1fr;
   }
+
+  .design-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.design-controls,
+.design-preview {
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 8px 30px rgba(79, 33, 66, 0.06);
+}
+
+.design-controls h2 {
+  margin: 14px 0;
+}
+
+.design-controls label {
+  display: block;
+  font-weight: 600;
+  margin: 20px 0 8px;
+}
+
+.design-controls select,
+.design-controls textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dccbd5;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.design-controls input[type="color"] {
+  width: 70px;
+  height: 45px;
+  cursor: pointer;
+}
+
+.design-controls button {
+  border: none;
+  cursor: pointer;
+  margin-top: 24px;
+}
+
+.design-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-canvas {
+  min-height: 360px;
+  margin-top: 20px;
+  padding: 40px 20px;
+  background: #faf6f9;
+  border: 1px dashed #dccbd5;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.garment-swatch {
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 180px;
+  margin: 0 auto 24px;
+  border-radius: 60px 60px 25px 25px;
+  color: white;
+  font-size: 60px;
+}
+
+.preview-note {
+  color: #278354;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .design-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
 }

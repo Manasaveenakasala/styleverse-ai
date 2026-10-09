@@ -71,7 +71,10 @@ function handleGenerate() {
         <span className="eyebrow">DESIGN PREVIEW</span>
         <div className="preview-canvas">
           <div>
-          <GarmentViewer color={color} />
+          <GarmentViewer
+            color={color}
+            garment={garment as 'Dress' | 'Jacket' | 'Shirt' | 'Skirt' | 'Pants'}
+          />
             ✦
           </div>
           <h3>{garment}</h3>

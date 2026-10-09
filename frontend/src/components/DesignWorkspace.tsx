@@ -8,13 +8,16 @@ export default function DesignWorkspace() {
   const [description, setDescription] = useState('')
   const [design, setDesign] = useState<string | null>(null)
 
-  function handleGenerate() {
-    if (!description.trim()) return
-
-    setDesign(
-      `${color} ${garment.toLowerCase()} — ${description.trim()}`
-    )
+function handleGenerate() {
+  if (!description.trim()) {
+    alert('Please describe your design first.')
+    return
   }
+
+  setDesign(
+    `${garment} design created: ${description.trim()}`
+  )
+}
 
   return (
     <div className="design-workspace">
@@ -76,7 +79,13 @@ export default function DesignWorkspace() {
               : 'Your fashion concept will appear here.'}
           </p>
         </div>
-        {design && <p className="preview-note">Concept created successfully!</p>}
+        {design && (
+  <div className="preview-note" role="status">
+    <h3>Design Created Successfully!</h3>
+    <p>{design}</p>
+    <p>Selected color: {color}</p>
+  </div>
+)}
       </div>
     </div>
   )

@@ -1,3 +1,8 @@
+
+/* =========================================
+   STYLEVERSE AI — GLOBAL LAYOUT
+========================================= */
+
 * {
   box-sizing: border-box;
 }
@@ -8,14 +13,57 @@
   color: #251b27;
 }
 
+/* =========================================
+   NAVIGATION
+========================================= */
+
+.app > header,
+.navbar {
+  background: #ffffff;
+  border-bottom: 1px solid #eee5eb;
+}
+
+.app > header nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 32px;
+}
+
+.app > header nav > div {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.app > header nav a {
+  color: #554b57;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.app > header nav > a:first-child {
+  color: #a53d78;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.app > header nav a:hover {
+  color: #a53d78;
+}
+
+/* Original navbar styles */
+
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   padding: 22px 7%;
-  background: #fff;
-  border-bottom: 1px solid #eee5eb;
 }
 
 .brand {
@@ -40,20 +88,50 @@
   text-decoration: none;
 }
 
+/* =========================================
+   BUTTONS
+========================================= */
+
 .nav-button,
 .primary-button {
   display: inline-block;
   background: #a53d78;
-  color: white;
+  color: #ffffff;
   padding: 13px 22px;
+  border: none;
   border-radius: 8px;
   text-decoration: none;
+  font: inherit;
   font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
+
+.nav-button:hover,
+.primary-button:hover:not(:disabled) {
+  background: #8d3065;
+  transform: translateY(-1px);
+}
+
+.primary-button {
+  margin-top: 20px;
+}
+
+.primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   HOME — HERO SECTION
+========================================= */
 
 .hero {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
   gap: 50px;
   padding: 100px 7%;
@@ -73,15 +151,12 @@
   margin: 20px 0;
 }
 
-.hero-content > p {
+.hero-content > p,
+.hero > p {
   max-width: 480px;
   color: #6c606e;
   font-size: 17px;
   line-height: 1.8;
-}
-
-.primary-button {
-  margin-top: 20px;
 }
 
 .status {
@@ -104,12 +179,21 @@
   background: #36a269;
 }
 
+/* =========================================
+   HOME — FASHION VISUAL
+========================================= */
+
 .hero-visual {
   min-height: 430px;
   display: grid;
   place-items: center;
   border-radius: 30px;
-  background: linear-gradient(145deg, #e8c7d8, #f4e9ef, #c6a5be);
+  background: linear-gradient(
+    145deg,
+    #e8c7d8,
+    #f4e9ef,
+    #c6a5be
+  );
 }
 
 .fashion-card {
@@ -117,7 +201,7 @@
   padding: 50px 30px;
   text-align: center;
   background: rgba(255, 255, 255, 0.7);
-  border: 1px solid white;
+  border: 1px solid #ffffff;
   border-radius: 24px;
   box-shadow: 0 20px 60px rgba(79, 33, 66, 0.12);
 }
@@ -136,6 +220,10 @@
   color: #78677a;
 }
 
+/* =========================================
+   HOME — FEATURES, WORKSPACE, ABOUT
+========================================= */
+
 .features,
 .workspace,
 .about {
@@ -144,7 +232,7 @@
 }
 
 .features {
-  background: white;
+  background: #ffffff;
 }
 
 .features h2,
@@ -155,7 +243,7 @@
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
   margin-top: 40px;
 }
@@ -201,129 +289,177 @@
   margin: auto;
 }
 
-footer {
-  padding: 25px;
-  background: #251b27;
-  color: white;
-  text-align: center;
+/* =========================================
+   DESIGN STUDIO PAGE
+========================================= */
+
+.studio-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 32px 80px;
 }
 
-@media (max-width: 768px) {
-  .navbar {
-    flex-wrap: wrap;
-  }
+.studio-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
 
-  .navbar nav {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    gap: 18px;
-  }
+.studio-header h1 {
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1.2;
+  margin-bottom: 16px;
+  color: #352334;
+}
 
-  .hero {
-    grid-template-columns: 1fr;
-    padding-top: 60px;
-  }
+.studio-header p {
+  color: #70616c;
+  font-size: 16px;
+  line-height: 1.7;
+}
 
-  .hero-visual {
-    min-height: 320px;
-  }
+/* =========================================
+   DESIGN WORKSPACE — TWO COLUMNS
+========================================= */
 
-  .feature-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .design-workspace {
+.design-workspace {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
   gap: 32px;
+  align-items: start;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   text-align: left;
 }
 
+.design-workspace > * {
+  min-width: 0;
+}
+
 .design-controls,
 .design-preview {
-  background: #fff;
+  background: #ffffff;
+  border: 1px solid #f0dce7;
   border-radius: 20px;
   padding: 32px;
   box-shadow: 0 8px 30px rgba(79, 33, 66, 0.06);
 }
 
+/* =========================================
+   DESIGN CONTROLS
+========================================= */
+
+.design-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .design-controls h2 {
+  font-size: 30px;
+  line-height: 1.3;
   margin: 14px 0;
+  color: #352334;
+}
+
+.design-controls > p {
+  color: #746575;
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
 
 .design-controls label {
   display: block;
   font-weight: 600;
+  color: #493447;
   margin: 20px 0 8px;
 }
 
 .design-controls select,
 .design-controls textarea {
+  display: block;
   width: 100%;
-  padding: 12px;
+  padding: 12px 14px;
   border: 1px solid #dccbd5;
   border-radius: 8px;
+  background: #ffffff;
+  color: #251b27;
   font: inherit;
 }
 
+.design-controls select:focus,
+.design-controls textarea:focus {
+  outline: 2px solid #a53d78;
+  outline-offset: 2px;
+}
+
+.design-controls textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
 .design-controls input[type="color"] {
-  width: 70px;
-  height: 45px;
+  display: block;
+  width: 80px;
+  height: 48px;
+  padding: 4px;
+  border: 1px solid #dccbd5;
+  border-radius: 10px;
+  background: #ffffff;
   cursor: pointer;
 }
 
-.design-controls button {
-  border: none;
-  cursor: pointer;
+.design-controls .primary-button {
+  width: 100%;
   margin-top: 24px;
+  padding: 15px 24px;
 }
 
-.design-controls button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* =========================================
+   DESIGN PREVIEW
+========================================= */
+
+.design-preview {
+  min-height: 480px;
 }
 
 .preview-canvas {
-  min-height: 360px;
   margin-top: 20px;
-  padding: 40px 20px;
+  padding: 20px;
   background: #faf6f9;
   border: 1px dashed #dccbd5;
   border-radius: 16px;
   text-align: center;
 }
 
-.garment-swatch {
-  display: grid;
-  place-items: center;
-  width: 150px;
-  height: 180px;
-  margin: 0 auto 24px;
-  border-radius: 60px 60px 25px 25px;
-  color: white;
-  font-size: 60px;
+.preview-canvas h3 {
+  margin: 16px 0 8px;
+  font-size: 24px;
+  color: #352334;
 }
 
-.preview-note {
-  color: #278354;
-  font-weight: 600;
+.preview-canvas p {
+  color: #746575;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
-@media (max-width: 768px) {
-  .design-workspace {
-    grid-template-columns: 1fr;
-  }
-}
+/* =========================================
+   INTERACTIVE 3D GARMENT VIEWER
+========================================= */
 
 .garment-viewer {
   width: 100%;
   height: 350px;
   margin: 0 auto 24px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #f8f0f5, #e9dbe5);
+  background: linear-gradient(
+    135deg,
+    #f8f0f5,
+    #e9dbe5
+  );
   overflow: hidden;
 }
 
@@ -331,4 +467,135 @@ footer {
   display: block;
 }
 
+/* =========================================
+   DESIGN RESULT
+========================================= */
+
+.preview-note {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f9eaf2;
+  border: 1px solid #edcfe0;
+  border-radius: 12px;
+  color: #59324c;
+}
+
+.preview-note h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: #278354;
+}
+
+.preview-note p {
+  margin: 8px 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   FOOTER
+========================================= */
+
+footer {
+  padding: 25px;
+  background: #251b27;
+  color: #ffffff;
+  text-align: center;
+}
+
+/* =========================================
+   TABLET RESPONSIVENESS
+========================================= */
+
+@media (max-width: 850px) {
+  .design-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .design-controls,
+  .design-preview {
+    padding: 24px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    padding-top: 60px;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-visual {
+    min-height: 320px;
+  }
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS
+========================================= */
+
+@media (max-width: 640px) {
+  .app > header nav {
+    padding: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .app > header nav > div {
+    width: 100%;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .navbar {
+    flex-wrap: wrap;
+  }
+
+  .navbar nav {
+    width: 100%;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .hero {
+    padding: 60px 6%;
+    gap: 32px;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+  }
+
+  .features,
+  .workspace,
+  .about {
+    padding: 60px 6%;
+  }
+
+  .studio-page {
+    padding: 32px 16px 60px;
+  }
+
+  .studio-header {
+    margin-bottom: 32px;
+  }
+
+  .design-workspace {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .design-controls,
+  .design-preview {
+    padding: 20px;
+  }
+
+  .preview-canvas {
+    padding: 12px;
+  }
+
+  .garment-viewer {
+    height: 300px;
+  }
 }

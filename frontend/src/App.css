@@ -56,8 +56,6 @@
   color: #a53d78;
 }
 
-/* Original navbar styles */
-
 .navbar {
   display: flex;
   align-items: center;
@@ -106,7 +104,7 @@
   text-align: center;
   cursor: pointer;
   transition:
-    background 0.2s ease,
+    background-color 0.2s ease,
     transform 0.2s ease;
 }
 
@@ -131,7 +129,9 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
   align-items: center;
   gap: 50px;
   padding: 100px 7%;
@@ -188,12 +188,13 @@
   display: grid;
   place-items: center;
   border-radius: 30px;
-  background: linear-gradient(
-    145deg,
-    #e8c7d8,
-    #f4e9ef,
-    #c6a5be
-  );
+  background:
+    linear-gradient(
+      145deg,
+      #e8c7d8,
+      #f4e9ef,
+      #c6a5be
+    );
 }
 
 .fashion-card {
@@ -243,7 +244,8 @@
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
   gap: 24px;
   margin-top: 40px;
 }
@@ -418,6 +420,48 @@
 }
 
 /* =========================================
+   SPRINT 2 — COLOR PRESETS
+========================================= */
+
+.design-controls .color-presets {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 14px 0 22px;
+}
+
+.design-controls .color-presets .color-swatch {
+  display: inline-block;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 2px solid #ddd1d9;
+  border-radius: 50%;
+  appearance: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.design-controls .color-presets .color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.design-controls .color-presets .color-swatch.selected {
+  outline: 3px solid #a53d78;
+  outline-offset: 3px;
+}
+
+.design-controls .color-presets .color-swatch:focus-visible {
+  outline: 3px solid #251b27;
+  outline-offset: 3px;
+}
+
+/* =========================================
    DESIGN PREVIEW
 ========================================= */
 
@@ -450,21 +494,57 @@
    INTERACTIVE 3D GARMENT VIEWER
 ========================================= */
 
+.garment-viewer-container {
+  width: 100%;
+}
+
 .garment-viewer {
   width: 100%;
   height: 350px;
   margin: 0 auto 24px;
   border-radius: 16px;
-  background: linear-gradient(
-    135deg,
-    #f8f0f5,
-    #e9dbe5
-  );
+  background:
+    linear-gradient(
+      135deg,
+      #f8f0f5,
+      #e9dbe5
+    );
   overflow: hidden;
 }
 
 .garment-viewer canvas {
   display: block;
+}
+
+/* =========================================
+   AUTO ROTATE BUTTON
+========================================= */
+
+.rotation-button {
+  display: block;
+  margin: 0 auto 20px;
+  padding: 12px 26px;
+  background: #a53d78;
+  color: #ffffff;
+  border: none;
+  border-radius: 25px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.rotation-button:hover {
+  background: #862d60;
+  transform: translateY(-1px);
+}
+
+.rotation-button:focus-visible {
+  outline: 3px solid #251b27;
+  outline-offset: 3px;
 }
 
 /* =========================================
@@ -599,31 +679,15 @@ footer {
     height: 300px;
   }
 
-  .garment-viewer-container {
-  width: 100%;
-}
+  .design-controls .color-presets {
+    gap: 10px;
+  }
 
-.rotation-button {
-  display: block;
-  margin: 0 auto 20px;
-  padding: 10px 20px;
-  background: #ffffff;
-  color: #a53d78;
-  border: 1px solid #a53d78;
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.rotation-button:hover {
-  background: #a53d78;
-  color: #ffffff;
-}
-
-.rotation-button:focus-visible {
-  outline: 3px solid #a53d78;
-  outline-offset: 3px;
-}
-
+  .design-controls .color-presets .color-swatch {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
 }

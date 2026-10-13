@@ -43,22 +43,16 @@ type CreatedDesign = {
 }
 
 export default function DesignWorkspace() {
-  // Garment selection
+  // Current design settings
   const [garment, setGarment] = useState<GarmentType>('Dress')
-
-  // Color selection
   const [color, setColor] = useState('#a53d78')
-
-  // Fabric selection
   const [fabric, setFabric] = useState<FabricType>('Cotton')
-
-  // User's design description
   const [description, setDescription] = useState('')
 
-  // Created design result
+  // Created design summary
   const [design, setDesign] = useState<CreatedDesign | null>(null)
 
-  // Handle design creation
+  // Create a design summary
   function handleGenerate() {
     const trimmedDescription = description.trim()
 
@@ -72,6 +66,15 @@ export default function DesignWorkspace() {
       fabric,
       description: trimmedDescription,
     })
+  }
+
+  // Reset design settings
+  function handleReset() {
+    setGarment('Dress')
+    setColor('#a53d78')
+    setFabric('Cotton')
+    setDescription('')
+    setDesign(null)
   }
 
   return (
@@ -111,7 +114,7 @@ export default function DesignWorkspace() {
           ))}
         </select>
 
-        {/* Custom garment color */}
+        {/* Custom color picker */}
         <label htmlFor="garment-color">
           Garment color
         </label>
@@ -123,7 +126,7 @@ export default function DesignWorkspace() {
           onChange={(event) => setColor(event.target.value)}
         />
 
-        {/* Preset colors */}
+        {/* Color preset buttons */}
         <div
           className="color-presets"
           role="group"
@@ -180,8 +183,7 @@ export default function DesignWorkspace() {
           id="design-description"
           value={description}
           onChange={(event) =>
-            setDescription(event.target.value)
-          }
+            setDescription(event.target.value)}
           placeholder="Example: A modern evening dress with elegant sleeves and floral details"
           rows={5}
         />
@@ -195,10 +197,19 @@ export default function DesignWorkspace() {
         >
           Create Design
         </button>
+
+        {/* Reset Design button */}
+        <button
+          type="button"
+          className="reset-button"
+          onClick={handleReset}
+        >
+          Reset Design
+        </button>
       </div>
 
       {/* ======================================
-          RIGHT PANEL — 3D DESIGN PREVIEW
+          RIGHT PANEL — DESIGN PREVIEW
       ====================================== */}
 
       <div className="design-preview">
@@ -214,7 +225,7 @@ export default function DesignWorkspace() {
             fabric={fabric}
           />
 
-          {/* Current garment information */}
+          {/* Current selection */}
           <h3>{garment}</h3>
 
           <p>
@@ -230,6 +241,53 @@ export default function DesignWorkspace() {
               ? description
               : 'Your fashion concept will appear here.'}
           </p>
+        </div>
+
+        {/* ======================================
+            ENHANCED DESIGN DETAILS
+        ====================================== */}
+
+        <div className="design-details">
+          <h3>Design Details</h3>
+
+          {/* Garment */}
+          <div className="design-detail-row">
+            <span>Garment</span>
+            <strong>{garment}</strong>
+          </div>
+
+          {/* Fabric */}
+          <div className="design-detail-row">
+            <span>Fabric</span>
+            <strong>{fabric}</strong>
+          </div>
+
+          {/* Color */}
+          <div className="design-detail-row">
+            <span>Color</span>
+
+            <div className="design-color-value">
+              <span
+                className="design-color-indicator"
+                style={{
+                  backgroundColor: color,
+                }}
+                aria-hidden="true"
+              />
+
+              <strong>{color.toUpperCase()}</strong>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="design-detail-description">
+            <span>Design Description</span>
+
+            <p>
+              {description.trim() ||
+                'Add a description to personalize your design.'}
+            </p>
+          </div>
         </div>
 
         {/* ======================================

@@ -1,6 +1,7 @@
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import GarmentViewer from './GarmentViewer'
+import { createDesign } from '../services/api'
 
 // Garment types
 type GarmentType = 'Dress' | 'Jacket' | 'Shirt' | 'Skirt' | 'Pants'
@@ -49,32 +50,76 @@ export default function DesignWorkspace() {
   const [fabric, setFabric] = useState<FabricType>('Cotton')
   const [description, setDescription] = useState('')
 
-  // Created design summary
+  // API request state
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState('')
   const [design, setDesign] = useState<CreatedDesign | null>(null)
 
-  // Create a design summary
-  function handleGenerate() {
+  // Prevent outdated responses from updating the UI after Reset
+  const requestVersion = useRef(0)
+
+  // Send design to FastAPI
+  async function handleGenerate() {
     const trimmedDescription = description.trim()
 
-    if (!trimmedDescription) {
+    if (!trimmedDescription || isCreating) {
       return
     }
 
-    setDesign({
+    const currentRequest = ++requestVersion.current
+
+    const newDesign: CreatedDesign = {
       garment,
       color,
       fabric,
       description: trimmedDescription,
-    })
+    }
+
+    setIsCreating(true)
+    setError('')
+    setDesign(null)
+
+    try {
+      const response = await createDesign(newDesign)
+
+      if (currentRequest !== requestVersion.current) {
+        return
+      }
+
+      setDesign({
+        garment: response.design.garment as GarmentType,
+        color: response.design.color,
+        fabric: response.design.fabric as FabricType,
+        description: response.design.description,
+      })
+    } catch (err) {
+      if (currentRequest !== requestVersion.current) {
+        return
+      }
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to create design. Please try again.'
+      )
+    } finally {
+      if (currentRequest === requestVersion.current) {
+        setIsCreating(false)
+      }
+    }
   }
 
   // Reset design settings
   function handleReset() {
+    requestVersion.current += 1
+
     setGarment('Dress')
     setColor('#a53d78')
     setFabric('Cotton')
     setDescription('')
     setDesign(null)
+    setError('')
+    setIsCreating(false)
   }
 
   return (
@@ -193,9 +238,9 @@ export default function DesignWorkspace() {
           type="button"
           className="primary-button"
           onClick={handleGenerate}
-          disabled={!description.trim()}
+          disabled={!description.trim() || isCreating}
         >
-          Create Design
+          {isCreating ? 'Creating Design...' : 'Create Design'}
         </button>
 
         {/* Reset Design button */}
@@ -206,6 +251,13 @@ export default function DesignWorkspace() {
         >
           Reset Design
         </button>
+
+        {/* API error message */}
+        {error && (
+          <p className="design-error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
 
       {/* ======================================
@@ -296,7 +348,11 @@ export default function DesignWorkspace() {
 
         {design && (
           <div className="preview-note" role="status">
-            <h3>Design Created Successfully!</h3>
+            <h3>Design Sent Successfully!</h3>
+
+            <p>
+              Your fashion design was received by FastAPI.
+            </p>
 
             <p>
               <strong>Garment:</strong> {design.garment}

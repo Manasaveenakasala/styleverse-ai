@@ -1,3 +1,4 @@
+
 .venv/
 node_modules/
 dist/
@@ -7,3 +8,9 @@ __pycache__/
 .env.*
 !.env.example
 .DS_Store
+
+# SQLite database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal

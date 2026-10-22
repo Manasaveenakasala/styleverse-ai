@@ -46,3 +46,28 @@ export async function createDesign(
 
   return response.json() as Promise<CreateDesignResponse>;
 }
+
+
+export type SavedDesign = DesignPayload & {
+  id: number
+  created_at: string
+}
+
+export type SavedDesignsResponse = {
+  designs: SavedDesign[]
+}
+
+// Retrieve all saved fashion designs from FastAPI
+export async function getSavedDesigns(): Promise<SavedDesign[]> {
+  const response = await fetch(`${API_BASE_URL}/designs`)
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to load saved designs: ${response.status}`
+    )
+  }
+
+  const data = (await response.json()) as SavedDesignsResponse
+  return data.designs
+}
+

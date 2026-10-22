@@ -1,12 +1,16 @@
 
 import { useEffect, useState } from 'react'
 import DesignWorkspace from '../components/DesignWorkspace'
+import SavedDesigns from '../components/SavedDesigns'
 import { checkBackendHealth } from '../services/api'
 
 export default function DesignStudio() {
   const [backendStatus, setBackendStatus] = useState<
     'connecting' | 'connected' | 'unavailable'
   >('connecting')
+
+  // Increase this number whenever a new design is saved
+  const [designRefreshKey, setDesignRefreshKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -30,6 +34,11 @@ export default function DesignStudio() {
     }
   }, [])
 
+  // Called only after a design is saved successfully
+  function handleDesignSaved() {
+    setDesignRefreshKey((previous) => previous + 1)
+  }
+
   return (
     <main className="studio-page">
       <section className="studio-header">
@@ -47,7 +56,9 @@ export default function DesignStudio() {
         {backendStatus === 'unavailable' && '⚠ Backend Unavailable'}
       </p>
 
-      <DesignWorkspace />
+      <DesignWorkspace onDesignSaved={handleDesignSaved} />
+
+      <SavedDesigns refreshKey={designRefreshKey} />
     </main>
   )
 }

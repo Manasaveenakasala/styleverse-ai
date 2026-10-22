@@ -43,7 +43,14 @@ type CreatedDesign = {
   description: string
 }
 
-export default function DesignWorkspace() {
+// Props received from DesignStudio.tsx
+type DesignWorkspaceProps = {
+  onDesignSaved: () => void
+}
+
+export default function DesignWorkspace({
+  onDesignSaved,
+}: DesignWorkspaceProps) {
   // Current design settings
   const [garment, setGarment] = useState<GarmentType>('Dress')
   const [color, setColor] = useState('#a53d78')
@@ -55,10 +62,10 @@ export default function DesignWorkspace() {
   const [error, setError] = useState('')
   const [design, setDesign] = useState<CreatedDesign | null>(null)
 
-  // Prevent outdated responses from updating the UI after Reset
+  // Ignore outdated API responses after Reset
   const requestVersion = useRef(0)
 
-  // Send design to FastAPI
+  // Send a design to FastAPI and save it in SQLite
   async function handleGenerate() {
     const trimmedDescription = description.trim()
 
@@ -82,16 +89,21 @@ export default function DesignWorkspace() {
     try {
       const response = await createDesign(newDesign)
 
+      // Ignore a response if Reset was clicked
       if (currentRequest !== requestVersion.current) {
         return
       }
 
+      // Show the design returned by FastAPI
       setDesign({
         garment: response.design.garment as GarmentType,
         color: response.design.color,
         fabric: response.design.fabric as FabricType,
         description: response.design.description,
       })
+
+      // Tell DesignStudio to refresh My Saved Designs
+      onDesignSaved()
     } catch (err) {
       if (currentRequest !== requestVersion.current) {
         return
@@ -100,7 +112,7 @@ export default function DesignWorkspace() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Unable to create design. Please try again.'
+          : 'Unable to save design. Please try again.'
       )
     } finally {
       if (currentRequest === requestVersion.current) {
@@ -109,7 +121,7 @@ export default function DesignWorkspace() {
     }
   }
 
-  // Reset design settings
+  // Reset all design settings
   function handleReset() {
     requestVersion.current += 1
 
@@ -228,7 +240,8 @@ export default function DesignWorkspace() {
           id="design-description"
           value={description}
           onChange={(event) =>
-            setDescription(event.target.value)}
+            setDescription(event.target.value)
+          }
           placeholder="Example: A modern evening dress with elegant sleeves and floral details"
           rows={5}
         />
@@ -343,15 +356,15 @@ export default function DesignWorkspace() {
         </div>
 
         {/* ======================================
-            CREATED DESIGN SUMMARY
+            SAVED DESIGN SUMMARY
         ====================================== */}
 
         {design && (
           <div className="preview-note" role="status">
-            <h3>Design Sent Successfully!</h3>
+            <h3>Design Saved Successfully!</h3>
 
             <p>
-              Your fashion design was received by FastAPI.
+              Your fashion design was saved to SQLite.
             </p>
 
             <p>

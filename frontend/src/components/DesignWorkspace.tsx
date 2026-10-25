@@ -1,15 +1,43 @@
 
 import { useRef, useState } from 'react'
 import GarmentViewer from './GarmentViewer'
-import { createDesign } from '../services/api'
+import {
+  createDesign,
+  generateDesignSuggestion,
+} from '../services/api'
 
-// Garment types
-type GarmentType = 'Dress' | 'Jacket' | 'Shirt' | 'Skirt' | 'Pants'
+// ==========================================
+// TYPES
+// ==========================================
 
-// Fabric types
-type FabricType = 'Cotton' | 'Silk' | 'Denim' | 'Leather'
+type GarmentType =
+  | 'Dress'
+  | 'Jacket'
+  | 'Shirt'
+  | 'Skirt'
+  | 'Pants'
 
-// Available garments
+type FabricType =
+  | 'Cotton'
+  | 'Silk'
+  | 'Denim'
+  | 'Leather'
+
+type CreatedDesign = {
+  garment: GarmentType
+  color: string
+  fabric: FabricType
+  description: string
+}
+
+type DesignWorkspaceProps = {
+  onDesignSaved: () => void
+}
+
+// ==========================================
+// OPTIONS
+// ==========================================
+
 const garmentOptions: GarmentType[] = [
   'Dress',
   'Jacket',
@@ -18,7 +46,6 @@ const garmentOptions: GarmentType[] = [
   'Pants',
 ]
 
-// Available fabrics
 const fabricOptions: FabricType[] = [
   'Cotton',
   'Silk',
@@ -26,7 +53,6 @@ const fabricOptions: FabricType[] = [
   'Leather',
 ]
 
-// Preset garment colors
 const colorPresets = [
   { name: 'Rose', value: '#a53d78' },
   { name: 'Black', value: '#29252b' },
@@ -35,41 +61,103 @@ const colorPresets = [
   { name: 'Green', value: '#42856a' },
 ]
 
-// Created design information
-type CreatedDesign = {
-  garment: GarmentType
-  color: string
-  fabric: FabricType
-  description: string
-}
-
-// Props received from DesignStudio.tsx
-type DesignWorkspaceProps = {
-  onDesignSaved: () => void
-}
+// ==========================================
+// DESIGN WORKSPACE COMPONENT
+// ==========================================
 
 export default function DesignWorkspace({
   onDesignSaved,
 }: DesignWorkspaceProps) {
-  // Current design settings
+  // Form state
   const [garment, setGarment] = useState<GarmentType>('Dress')
   const [color, setColor] = useState('#a53d78')
   const [fabric, setFabric] = useState<FabricType>('Cotton')
   const [description, setDescription] = useState('')
 
-  // API request state
+  // Request state
   const [isCreating, setIsCreating] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  // Feedback state
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+
+  // Saved design summary
   const [design, setDesign] = useState<CreatedDesign | null>(null)
 
-  // Ignore outdated API responses after Reset
+  // Ignore outdated requests after Reset
   const requestVersion = useRef(0)
 
-  // Send a design to FastAPI and save it in SQLite
-  async function handleGenerate() {
+  // ========================================
+  // GENERATE FREE FASHION SUGGESTION
+  // ========================================
+
+  async function handleGenerateSuggestion() {
     const trimmedDescription = description.trim()
 
-    if (!trimmedDescription || isCreating) {
+    if (
+      trimmedDescription.length < 10 ||
+      isGenerating ||
+      isCreating
+    ) {
+      return
+    }
+
+    const currentRequest = ++requestVersion.current
+
+    setIsGenerating(true)
+    setError('')
+    setSuccessMessage('')
+    setDesign(null)
+
+    try {
+      const response = await generateDesignSuggestion(
+        trimmedDescription
+      )
+
+      if (currentRequest !== requestVersion.current) {
+        return
+      }
+
+      const suggestion = response.design
+
+      setGarment(suggestion.garment as GarmentType)
+      setColor(suggestion.color)
+      setFabric(suggestion.fabric as FabricType)
+      setDescription(suggestion.description)
+
+      setSuccessMessage(
+        'Fashion suggestion generated! Review your design, then click Create Design to save it.'
+      )
+    } catch (err) {
+      if (currentRequest !== requestVersion.current) {
+        return
+      }
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to generate a fashion suggestion.'
+      )
+    } finally {
+      if (currentRequest === requestVersion.current) {
+        setIsGenerating(false)
+      }
+    }
+  }
+
+  // ========================================
+  // CREATE AND SAVE DESIGN
+  // ========================================
+
+  async function handleCreateDesign() {
+    const trimmedDescription = description.trim()
+
+    if (
+      !trimmedDescription ||
+      isCreating ||
+      isGenerating
+    ) {
       return
     }
 
@@ -84,17 +172,16 @@ export default function DesignWorkspace({
 
     setIsCreating(true)
     setError('')
+    setSuccessMessage('')
     setDesign(null)
 
     try {
       const response = await createDesign(newDesign)
 
-      // Ignore a response if Reset was clicked
       if (currentRequest !== requestVersion.current) {
         return
       }
 
-      // Show the design returned by FastAPI
       setDesign({
         garment: response.design.garment as GarmentType,
         color: response.design.color,
@@ -102,7 +189,9 @@ export default function DesignWorkspace({
         description: response.design.description,
       })
 
-      // Tell DesignStudio to refresh My Saved Designs
+      setSuccessMessage('Design saved successfully!')
+
+      // Refresh the saved designs section
       onDesignSaved()
     } catch (err) {
       if (currentRequest !== requestVersion.current) {
@@ -121,7 +210,10 @@ export default function DesignWorkspace({
     }
   }
 
-  // Reset all design settings
+  // ========================================
+  // RESET DESIGN
+  // ========================================
+
   function handleReset() {
     requestVersion.current += 1
 
@@ -129,16 +221,22 @@ export default function DesignWorkspace({
     setColor('#a53d78')
     setFabric('Cotton')
     setDescription('')
+
     setDesign(null)
     setError('')
+    setSuccessMessage('')
+
     setIsCreating(false)
+    setIsGenerating(false)
   }
+
+  // ========================================
+  // RENDER
+  // ========================================
 
   return (
     <div className="design-workspace">
-      {/* ======================================
-          LEFT PANEL — DESIGN CONTROLS
-      ====================================== */}
+      {/* LEFT SIDE — DESIGN CONTROLS */}
 
       <div className="design-controls">
         <span className="eyebrow">
@@ -152,7 +250,8 @@ export default function DesignWorkspace({
           and describe your fashion vision.
         </p>
 
-        {/* Garment selection */}
+        {/* GARMENT TYPE */}
+
         <label htmlFor="garment">
           Garment type
         </label>
@@ -171,7 +270,8 @@ export default function DesignWorkspace({
           ))}
         </select>
 
-        {/* Custom color picker */}
+        {/* GARMENT COLOR */}
+
         <label htmlFor="garment-color">
           Garment color
         </label>
@@ -180,10 +280,13 @@ export default function DesignWorkspace({
           id="garment-color"
           type="color"
           value={color}
-          onChange={(event) => setColor(event.target.value)}
+          onChange={(event) =>
+            setColor(event.target.value)
+          }
         />
 
-        {/* Color preset buttons */}
+        {/* COLOR PRESETS */}
+
         <div
           className="color-presets"
           role="group"
@@ -212,7 +315,8 @@ export default function DesignWorkspace({
           })}
         </div>
 
-        {/* Fabric selection */}
+        {/* FABRIC TYPE */}
+
         <label htmlFor="fabric">
           Fabric type
         </label>
@@ -231,7 +335,8 @@ export default function DesignWorkspace({
           ))}
         </select>
 
-        {/* Design description */}
+        {/* DESIGN DESCRIPTION */}
+
         <label htmlFor="design-description">
           Describe your design
         </label>
@@ -242,21 +347,51 @@ export default function DesignWorkspace({
           onChange={(event) =>
             setDescription(event.target.value)
           }
-          placeholder="Example: A modern evening dress with elegant sleeves and floral details"
+          placeholder="Example: Design an elegant blue silk dress for a wedding"
           rows={5}
         />
 
-        {/* Create Design button */}
+        {/* FREE FASHION SUGGESTION BUTTON */}
+
+        <button
+          type="button"
+          className="suggestion-button"
+          onClick={handleGenerateSuggestion}
+          disabled={
+            description.trim().length < 10 ||
+            isGenerating ||
+            isCreating
+          }
+        >
+          {isGenerating
+            ? 'Generating Suggestion...'
+            : '✨ Generate Design Suggestion'}
+        </button>
+
+        <p className="suggestion-hint">
+          Free local fashion suggestions.
+          No API payment required.
+        </p>
+
+        {/* CREATE DESIGN BUTTON */}
+
         <button
           type="button"
           className="primary-button"
-          onClick={handleGenerate}
-          disabled={!description.trim() || isCreating}
+          onClick={handleCreateDesign}
+          disabled={
+            !description.trim() ||
+            isCreating ||
+            isGenerating
+          }
         >
-          {isCreating ? 'Creating Design...' : 'Create Design'}
+          {isCreating
+            ? 'Creating Design...'
+            : 'Create Design'}
         </button>
 
-        {/* Reset Design button */}
+        {/* RESET BUTTON */}
+
         <button
           type="button"
           className="reset-button"
@@ -265,32 +400,45 @@ export default function DesignWorkspace({
           Reset Design
         </button>
 
-        {/* API error message */}
+        {/* ERROR MESSAGE */}
+
         {error && (
-          <p className="design-error" role="alert">
+          <p
+            className="design-error"
+            role="alert"
+          >
             {error}
+          </p>
+        )}
+
+        {/* SUCCESS MESSAGE */}
+
+        {successMessage && (
+          <p
+            className="suggestion-success"
+            role="status"
+          >
+            {successMessage}
           </p>
         )}
       </div>
 
-      {/* ======================================
-          RIGHT PANEL — DESIGN PREVIEW
-      ====================================== */}
+      {/* RIGHT SIDE — 3D PREVIEW */}
 
       <div className="design-preview">
         <span className="eyebrow">
           DESIGN PREVIEW
         </span>
 
+        {/* GARMENT VIEWER */}
+
         <div className="preview-canvas">
-          {/* Interactive 3D garment */}
           <GarmentViewer
             garment={garment}
             color={color}
             fabric={fabric}
           />
 
-          {/* Current selection */}
           <h3>{garment}</h3>
 
           <p>
@@ -298,7 +446,8 @@ export default function DesignWorkspace({
           </p>
 
           <p>
-            <strong>Color:</strong> {color.toUpperCase()}
+            <strong>Color:</strong>{' '}
+            {color.toUpperCase()}
           </p>
 
           <p>
@@ -308,26 +457,21 @@ export default function DesignWorkspace({
           </p>
         </div>
 
-        {/* ======================================
-            ENHANCED DESIGN DETAILS
-        ====================================== */}
+        {/* DESIGN DETAILS */}
 
         <div className="design-details">
           <h3>Design Details</h3>
 
-          {/* Garment */}
           <div className="design-detail-row">
             <span>Garment</span>
             <strong>{garment}</strong>
           </div>
 
-          {/* Fabric */}
           <div className="design-detail-row">
             <span>Fabric</span>
             <strong>{fabric}</strong>
           </div>
 
-          {/* Color */}
           <div className="design-detail-row">
             <span>Color</span>
 
@@ -340,11 +484,12 @@ export default function DesignWorkspace({
                 aria-hidden="true"
               />
 
-              <strong>{color.toUpperCase()}</strong>
+              <strong>
+                {color.toUpperCase()}
+              </strong>
             </div>
           </div>
 
-          {/* Description */}
           <div className="design-detail-description">
             <span>Design Description</span>
 
@@ -355,12 +500,13 @@ export default function DesignWorkspace({
           </div>
         </div>
 
-        {/* ======================================
-            SAVED DESIGN SUMMARY
-        ====================================== */}
+        {/* SAVED DESIGN CONFIRMATION */}
 
         {design && (
-          <div className="preview-note" role="status">
+          <div
+            className="preview-note"
+            role="status"
+          >
             <h3>Design Saved Successfully!</h3>
 
             <p>
@@ -368,19 +514,23 @@ export default function DesignWorkspace({
             </p>
 
             <p>
-              <strong>Garment:</strong> {design.garment}
+              <strong>Garment:</strong>{' '}
+              {design.garment}
             </p>
 
             <p>
-              <strong>Fabric:</strong> {design.fabric}
+              <strong>Fabric:</strong>{' '}
+              {design.fabric}
             </p>
 
             <p>
-              <strong>Color:</strong> {design.color.toUpperCase()}
+              <strong>Color:</strong>{' '}
+              {design.color.toUpperCase()}
             </p>
 
             <p>
-              <strong>Description:</strong> {design.description}
+              <strong>Description:</strong>{' '}
+              {design.description}
             </p>
           </div>
         )}

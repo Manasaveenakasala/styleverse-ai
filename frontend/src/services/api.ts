@@ -1,10 +1,30 @@
 
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
+// ==========================================
+// BACKEND HEALTH CHECK
+// ==========================================
+
 export type HealthResponse = {
   status: string
   app: string
 }
+
+export async function checkBackendHealth(): Promise<HealthResponse> {
+  const response = await fetch(`${API_BASE_URL}/health`)
+
+  if (!response.ok) {
+    throw new Error(
+      `Backend health check failed: ${response.status}`
+    )
+  }
+
+  return response.json() as Promise<HealthResponse>
+}
+
+// ==========================================
+// DESIGN TYPES
+// ==========================================
 
 export type DesignPayload = {
   garment: string
@@ -13,32 +33,24 @@ export type DesignPayload = {
   description: string
 }
 
-export type CreateDesignResponse = {
-  message: string
-  design: DesignPayload
-}
-
 export type SavedDesign = DesignPayload & {
   id: number
   created_at: string
+}
+
+export type CreateDesignResponse = {
+  message: string
+  design: SavedDesign
 }
 
 export type SavedDesignsResponse = {
   designs: SavedDesign[]
 }
 
-// Check FastAPI backend connection
-export async function checkBackendHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE_URL}/health`)
+// ==========================================
+// CREATE DESIGN
+// ==========================================
 
-  if (!response.ok) {
-    throw new Error(`Backend health check failed: ${response.status}`)
-  }
-
-  return response.json() as Promise<HealthResponse>
-}
-
-// Create and save a new design
 export async function createDesign(
   design: DesignPayload
 ): Promise<CreateDesignResponse> {
@@ -51,18 +63,25 @@ export async function createDesign(
   })
 
   if (!response.ok) {
-    throw new Error(`Failed to create design: ${response.status}`)
+    throw new Error(
+      `Failed to create design: ${response.status}`
+    )
   }
 
   return response.json() as Promise<CreateDesignResponse>
 }
 
-// Retrieve saved designs
+// ==========================================
+// GET SAVED DESIGNS
+// ==========================================
+
 export async function getSavedDesigns(): Promise<SavedDesign[]> {
   const response = await fetch(`${API_BASE_URL}/designs`)
 
   if (!response.ok) {
-    throw new Error(`Failed to load saved designs: ${response.status}`)
+    throw new Error(
+      `Failed to load saved designs: ${response.status}`
+    )
   }
 
   const data = (await response.json()) as SavedDesignsResponse
@@ -70,8 +89,13 @@ export async function getSavedDesigns(): Promise<SavedDesign[]> {
   return data.designs
 }
 
-// Delete a saved design by its ID
-export async function deleteDesign(designId: number): Promise<void> {
+// ==========================================
+// DELETE SAVED DESIGN
+// ==========================================
+
+export async function deleteDesign(
+  designId: number
+): Promise<void> {
   const response = await fetch(
     `${API_BASE_URL}/designs/${designId}`,
     {
@@ -80,6 +104,40 @@ export async function deleteDesign(designId: number): Promise<void> {
   )
 
   if (!response.ok) {
-    throw new Error(`Failed to delete design: ${response.status}`)
+    throw new Error(
+      `Failed to delete design: ${response.status}`
+    )
   }
+}
+
+// ==========================================
+// GENERATE FREE FASHION SUGGESTION
+// ==========================================
+
+export type AIDesignResponse = {
+  message: string
+  design: DesignPayload
+}
+
+export async function generateDesignSuggestion(
+  description: string
+): Promise<AIDesignResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/ai/suggest-design`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ description }),
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to generate suggestion: ${response.status}`
+    )
+  }
+
+  return response.json() as Promise<AIDesignResponse>
 }

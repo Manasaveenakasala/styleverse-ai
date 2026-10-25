@@ -9,19 +9,30 @@ from pydantic import BaseModel, Field
 from database import get_connection, initialize_database
 
 
-# Initialize database when FastAPI starts
+# ==========================================
+# DATABASE INITIALIZATION
+# ==========================================
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_database()
     yield
 
 
+# ==========================================
+# FASTAPI APPLICATION
+# ==========================================
+
 app = FastAPI(
     title="StyleVerse AI API",
-    lifespan=lifespan,
+    lifespan=lifespan
 )
 
-# Allow React frontend to communicate with FastAPI
+
+# ==========================================
+# CORS CONFIGURATION
+# ==========================================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -36,7 +47,10 @@ app.add_middleware(
 )
 
 
-# Design request model
+# ==========================================
+# DESIGN REQUEST MODEL
+# ==========================================
+
 class DesignCreate(BaseModel):
     garment: str = Field(min_length=1)
     color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
@@ -44,16 +58,23 @@ class DesignCreate(BaseModel):
     description: str = Field(min_length=1)
 
 
-# Backend health check
+# ==========================================
+# HEALTH CHECK
+# ==========================================
+
 @app.get("/health")
 def health():
     return {
         "status": "ok",
-        "app": "StyleVerse AI",
+        "app": "StyleVerse AI"
     }
 
 
-# Save a new design to SQLite
+# ==========================================
+# CREATE DESIGN
+# POST /designs
+# ==========================================
+
 @app.post("/designs", status_code=201)
 def create_design(design: DesignCreate):
     try:
@@ -72,55 +93,110 @@ def create_design(design: DesignCreate):
                     design.garment,
                     design.color,
                     design.fabric,
-                    design.description,
-                ),
+                    design.description
+                )
             )
 
             design_id = cursor.lastrowid
+
             connection.commit()
 
             saved_design = connection.execute(
                 """
-                SELECT id, garment, color, fabric,
-                       description, created_at
+                SELECT
+                    id,
+                    garment,
+                    color,
+                    fabric,
+                    description,
+                    created_at
                 FROM designs
                 WHERE id = ?
                 """,
-                (design_id,),
+                (design_id,)
             ).fetchone()
 
         return {
             "message": "Design saved successfully",
-            "design": dict(saved_design),
+            "design": dict(saved_design)
         }
 
     except sqlite3.Error:
         raise HTTPException(
             status_code=500,
-            detail="Unable to save design",
+            detail="Unable to save design"
         )
 
 
-# Retrieve all saved designs
+# ==========================================
+# GET ALL SAVED DESIGNS
+# GET /designs
+# ==========================================
+
 @app.get("/designs")
 def get_designs():
     try:
         with get_connection() as connection:
             designs = connection.execute(
                 """
-                SELECT id, garment, color, fabric,
-                       description, created_at
+                SELECT
+                    id,
+                    garment,
+                    color,
+                    fabric,
+                    description,
+                    created_at
                 FROM designs
                 ORDER BY id DESC
                 """
             ).fetchall()
 
         return {
-            "designs": [dict(design) for design in designs],
+            "designs": [
+                dict(design)
+                for design in designs
+            ]
         }
 
     except sqlite3.Error:
         raise HTTPException(
             status_code=500,
-            detail="Unable to retrieve designs",
+            detail="Unable to retrieve designs"
+        )
+
+
+# ==========================================
+# DELETE SAVED DESIGN
+# DELETE /designs/{design_id}
+# ==========================================
+
+@app.delete("/designs/{design_id}")
+def delete_design(design_id: int):
+    try:
+        with get_connection() as connection:
+            cursor = connection.execute(
+                """
+                DELETE FROM designs
+                WHERE id = ?
+                """,
+                (design_id,)
+            )
+
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Design not found"
+                )
+
+            connection.commit()
+
+        return {
+            "message": "Design deleted successfully",
+            "id": design_id
+        }
+
+    except sqlite3.Error:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to delete design"
         )

@@ -2,7 +2,7 @@
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
 // ==========================================
-// BACKEND HEALTH CHECK
+// HEALTH CHECK
 // ==========================================
 
 export type HealthResponse = {
@@ -14,9 +14,7 @@ export async function checkBackendHealth(): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE_URL}/health`)
 
   if (!response.ok) {
-    throw new Error(
-      `Backend health check failed: ${response.status}`
-    )
+    throw new Error(`Backend health check failed: ${response.status}`)
   }
 
   return response.json() as Promise<HealthResponse>
@@ -36,6 +34,7 @@ export type DesignPayload = {
 export type SavedDesign = DesignPayload & {
   id: number
   created_at: string
+  is_favorite: number
 }
 
 export type CreateDesignResponse = {
@@ -63,9 +62,7 @@ export async function createDesign(
   })
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to create design: ${response.status}`
-    )
+    throw new Error(`Failed to create design: ${response.status}`)
   }
 
   return response.json() as Promise<CreateDesignResponse>
@@ -79,9 +76,7 @@ export async function getSavedDesigns(): Promise<SavedDesign[]> {
   const response = await fetch(`${API_BASE_URL}/designs`)
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to load saved designs: ${response.status}`
-    )
+    throw new Error(`Failed to load saved designs: ${response.status}`)
   }
 
   const data = (await response.json()) as SavedDesignsResponse
@@ -90,12 +85,10 @@ export async function getSavedDesigns(): Promise<SavedDesign[]> {
 }
 
 // ==========================================
-// DELETE SAVED DESIGN
+// DELETE DESIGN
 // ==========================================
 
-export async function deleteDesign(
-  designId: number
-): Promise<void> {
+export async function deleteDesign(designId: number): Promise<void> {
   const response = await fetch(
     `${API_BASE_URL}/designs/${designId}`,
     {
@@ -104,14 +97,47 @@ export async function deleteDesign(
   )
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to delete design: ${response.status}`
-    )
+    throw new Error(`Failed to delete design: ${response.status}`)
   }
 }
 
 // ==========================================
-// GENERATE FREE FASHION SUGGESTION
+// UPDATE FAVORITE STATUS
+// ==========================================
+
+export type FavoriteUpdateResponse = {
+  message: string
+  design: SavedDesign
+}
+
+export async function updateDesignFavorite(
+  designId: number,
+  isFavorite: boolean
+): Promise<FavoriteUpdateResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/designs/${designId}/favorite`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        is_favorite: isFavorite,
+      }),
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to update favorite: ${response.status}`
+    )
+  }
+
+  return response.json() as Promise<FavoriteUpdateResponse>
+}
+
+// ==========================================
+// FREE FASHION SUGGESTION GENERATOR
 // ==========================================
 
 export type AIDesignResponse = {
@@ -129,7 +155,9 @@ export async function generateDesignSuggestion(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ description }),
+      body: JSON.stringify({
+        description,
+      }),
     }
   )
 

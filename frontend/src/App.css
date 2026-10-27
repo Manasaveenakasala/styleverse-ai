@@ -871,4 +871,72 @@ footer {
   cursor: not-allowed;
 }
 
+/* ==========================================
+   SAVED DESIGN FAVORITES
+   ========================================== */
+
+.saved-design-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.filter-button {
+  padding: 10px 18px;
+  border: 1px solid #d8c6d0;
+  border-radius: 8px;
+  background: #fff;
+  color: #53364a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-button:hover {
+  background: #f8edf3;
+}
+
+.filter-button.active {
+  background: #a53d78;
+  color: #fff;
+  border-color: #a53d78;
+}
+
+.favorite-button {
+  padding: 10px 16px;
+  border: 1px solid #d8c6d0;
+  border-radius: 8px;
+  background: #fff;
+  color: #a53d78;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.favorite-button:hover:not(:disabled) {
+  background: #fff0f6;
+}
+
+.favorite-button.is-favorite {
+  background: #fce7f1;
+  border-color: #a53d78;
+  color: #96265f;
+}
+
+.favorite-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.saved-design-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+
 

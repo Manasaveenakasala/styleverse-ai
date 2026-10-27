@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="StyleVerse AI API",
     description="Backend API for StyleVerse AI 3D Fashion Designer",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -57,18 +57,21 @@ app.add_middleware(
 
 class DesignCreate(BaseModel):
     garment: str = Field(min_length=1)
-
-    color: str = Field(
-        pattern=r"^#[0-9a-fA-F]{6}$"
-    )
-
+    color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
     fabric: str = Field(min_length=1)
-
     description: str = Field(min_length=1)
 
 
 # ==========================================
-# FASHION SUGGESTION REQUEST MODEL
+# FAVORITE REQUEST MODEL
+# ==========================================
+
+class FavoriteUpdate(BaseModel):
+    is_favorite: bool
+
+
+# ==========================================
+# FASHION SUGGESTION MODELS
 # ==========================================
 
 class AIDesignRequest(BaseModel):
@@ -77,10 +80,6 @@ class AIDesignRequest(BaseModel):
         max_length=1000,
     )
 
-
-# ==========================================
-# FASHION SUGGESTION RESPONSE MODELS
-# ==========================================
 
 class AIDesignSuggestion(BaseModel):
     garment: Literal[
@@ -124,7 +123,7 @@ def health():
 
 
 # ==========================================
-# CREATE AND SAVE DESIGN
+# CREATE DESIGN
 # POST /designs
 # ==========================================
 
@@ -152,8 +151,6 @@ def create_design(design: DesignCreate):
 
             design_id = cursor.lastrowid
 
-            connection.commit()
-
             saved_design = connection.execute(
                 """
                 SELECT
@@ -162,27 +159,30 @@ def create_design(design: DesignCreate):
                     color,
                     fabric,
                     description,
-                    created_at
+                    created_at,
+                    is_favorite
                 FROM designs
                 WHERE id = ?
                 """,
                 (design_id,),
             ).fetchone()
 
+            connection.commit()
+
         return {
             "message": "Design saved successfully",
             "design": dict(saved_design),
         }
 
-    except sqlite3.Error:
+    except sqlite3.Error as exc:
         raise HTTPException(
             status_code=500,
             detail="Unable to save design",
-        )
+        ) from exc
 
 
 # ==========================================
-# GET ALL SAVED DESIGNS
+# GET ALL DESIGNS
 # GET /designs
 # ==========================================
 
@@ -198,7 +198,8 @@ def get_designs():
                     color,
                     fabric,
                     description,
-                    created_at
+                    created_at,
+                    is_favorite
                 FROM designs
                 ORDER BY id DESC
                 """
@@ -211,15 +212,88 @@ def get_designs():
             ]
         }
 
-    except sqlite3.Error:
+    except sqlite3.Error as exc:
         raise HTTPException(
             status_code=500,
             detail="Unable to retrieve designs",
-        )
+        ) from exc
 
 
 # ==========================================
-# DELETE SAVED DESIGN
+# UPDATE FAVORITE STATUS
+# PATCH /designs/{design_id}/favorite
+# ==========================================
+
+@app.patch("/designs/{design_id}/favorite")
+def update_favorite(
+    design_id: int,
+    favorite: FavoriteUpdate,
+):
+    try:
+        with get_connection() as connection:
+            existing_design = connection.execute(
+                """
+                SELECT id
+                FROM designs
+                WHERE id = ?
+                """,
+                (design_id,),
+            ).fetchone()
+
+            if existing_design is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Design not found",
+                )
+
+            connection.execute(
+                """
+                UPDATE designs
+                SET is_favorite = ?
+                WHERE id = ?
+                """,
+                (
+                    int(favorite.is_favorite),
+                    design_id,
+                ),
+            )
+
+            updated_design = connection.execute(
+                """
+                SELECT
+                    id,
+                    garment,
+                    color,
+                    fabric,
+                    description,
+                    created_at,
+                    is_favorite
+                FROM designs
+                WHERE id = ?
+                """,
+                (design_id,),
+            ).fetchone()
+
+            connection.commit()
+
+        return {
+            "message": (
+                "Design added to favorites"
+                if favorite.is_favorite
+                else "Design removed from favorites"
+            ),
+            "design": dict(updated_design),
+        }
+
+    except sqlite3.Error as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to update favorite status",
+        ) from exc
+
+
+# ==========================================
+# DELETE DESIGN
 # DELETE /designs/{design_id}
 # ==========================================
 
@@ -248,15 +322,15 @@ def delete_design(design_id: int):
             "id": design_id,
         }
 
-    except sqlite3.Error:
+    except sqlite3.Error as exc:
         raise HTTPException(
             status_code=500,
             detail="Unable to delete design",
-        )
+        ) from exc
 
 
 # ==========================================
-# ADVANCED FASHION SUGGESTION GENERATOR
+# FREE FASHION SUGGESTION GENERATOR
 # POST /ai/suggest-design
 # ==========================================
 
@@ -265,15 +339,10 @@ def delete_design(design_id: int):
     response_model=AIDesignResponse,
 )
 def suggest_ai_design(request: AIDesignRequest):
-
-    # Generate the suggestion using our
-    # free local fashion_suggestions.py module.
     suggestion_data = generate_fashion_suggestion(
         request.description
     )
 
-    # Validate garment, color, fabric,
-    # and description before returning.
     suggestion = AIDesignSuggestion(
         **suggestion_data
     )

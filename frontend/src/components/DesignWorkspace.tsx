@@ -1,9 +1,9 @@
-
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import GarmentViewer from './GarmentViewer'
 import {
   createDesign,
   generateDesignSuggestion,
+  type SavedDesign,
 } from '../services/api'
 
 // ==========================================
@@ -32,6 +32,8 @@ type CreatedDesign = {
 
 type DesignWorkspaceProps = {
   onDesignSaved: () => void
+  selectedDesign: SavedDesign | null
+  selectionVersion: number
 }
 
 // ==========================================
@@ -67,6 +69,8 @@ const colorPresets = [
 
 export default function DesignWorkspace({
   onDesignSaved,
+  selectedDesign,
+  selectionVersion,
 }: DesignWorkspaceProps) {
   // Form state
   const [garment, setGarment] = useState<GarmentType>('Dress')
@@ -87,6 +91,27 @@ export default function DesignWorkspace({
 
   // Ignore outdated requests after Reset
   const requestVersion = useRef(0)
+
+  // Load a saved design whenever it is selected. selectionVersion also lets a
+  // user reload the same design after changing the form.
+  useEffect(() => {
+    if (!selectedDesign) {
+      return
+    }
+
+    requestVersion.current += 1
+
+    setGarment(selectedDesign.garment as GarmentType)
+    setColor(selectedDesign.color)
+    setFabric(selectedDesign.fabric as FabricType)
+    setDescription(selectedDesign.description)
+
+    setDesign(null)
+    setError('')
+    setSuccessMessage('Saved design loaded into the workspace.')
+    setIsCreating(false)
+    setIsGenerating(false)
+  }, [selectedDesign, selectionVersion])
 
   // ========================================
   // GENERATE FREE FASHION SUGGESTION

@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from database import get_connection, initialize_database
+from fashion_suggestions import generate_fashion_suggestion
 
 
 # ==========================================
@@ -67,7 +68,7 @@ class DesignCreate(BaseModel):
 
 
 # ==========================================
-# AI SUGGESTION REQUEST MODEL
+# FASHION SUGGESTION REQUEST MODEL
 # ==========================================
 
 class AIDesignRequest(BaseModel):
@@ -78,7 +79,7 @@ class AIDesignRequest(BaseModel):
 
 
 # ==========================================
-# AI SUGGESTION RESPONSE MODEL
+# FASHION SUGGESTION RESPONSE MODELS
 # ==========================================
 
 class AIDesignSuggestion(BaseModel):
@@ -123,7 +124,7 @@ def health():
 
 
 # ==========================================
-# CREATE DESIGN
+# CREATE AND SAVE DESIGN
 # POST /designs
 # ==========================================
 
@@ -255,7 +256,7 @@ def delete_design(design_id: int):
 
 
 # ==========================================
-# FREE LOCAL FASHION SUGGESTION GENERATOR
+# ADVANCED FASHION SUGGESTION GENERATOR
 # POST /ai/suggest-design
 # ==========================================
 
@@ -265,117 +266,16 @@ def delete_design(design_id: int):
 )
 def suggest_ai_design(request: AIDesignRequest):
 
-    # Convert the user description to lowercase
-    prompt = request.description.lower()
-
-    # --------------------------------------
-    # DETECT GARMENT TYPE
-    # --------------------------------------
-
-    garment = "Dress"
-
-    garment_keywords = {
-        "Jacket": ["jacket", "coat", "blazer"],
-        "Shirt": ["shirt", "top", "blouse", "t-shirt"],
-        "Skirt": ["skirt"],
-        "Pants": ["pants", "trousers", "jeans"],
-        "Dress": ["dress", "gown"],
-    }
-
-    for garment_type, keywords in garment_keywords.items():
-        if any(keyword in prompt for keyword in keywords):
-            garment = garment_type
-            break
-
-    # --------------------------------------
-    # DETECT FABRIC TYPE
-    # --------------------------------------
-
-    fabric = "Cotton"
-
-    fabric_keywords = {
-        "Silk": ["silk", "satin"],
-        "Denim": ["denim", "jeans"],
-        "Leather": ["leather"],
-        "Cotton": ["cotton"],
-    }
-
-    for fabric_type, keywords in fabric_keywords.items():
-        if any(keyword in prompt for keyword in keywords):
-            fabric = fabric_type
-            break
-
-    # --------------------------------------
-    # DETECT COLOR
-    # --------------------------------------
-
-    colors = {
-        "red": "#B22222",
-        "blue": "#4779C7",
-        "green": "#42856A",
-        "black": "#29252B",
-        "white": "#F4F0EB",
-        "pink": "#A53D78",
-        "rose": "#A53D78",
-        "yellow": "#E5B93D",
-        "purple": "#8054A8",
-        "orange": "#E27D38",
-        "brown": "#8B5A3C",
-        "gray": "#808080",
-        "grey": "#808080",
-    }
-
-    color = "#A53D78"
-
-    for color_name, hex_value in colors.items():
-        if color_name in prompt:
-            color = hex_value
-            break
-
-    # --------------------------------------
-    # DETECT OCCASION
-    # --------------------------------------
-
-    occasion = "everyday fashion"
-
-    occasion_keywords = {
-        "wedding": "a wedding celebration",
-        "party": "a stylish party",
-        "office": "a professional office look",
-        "casual": "a casual outing",
-        "summer": "a comfortable summer look",
-        "winter": "a cozy winter look",
-        "evening": "an elegant evening event",
-        "formal": "a formal occasion",
-    }
-
-    for keyword, occasion_text in occasion_keywords.items():
-        if keyword in prompt:
-            occasion = occasion_text
-            break
-
-    # --------------------------------------
-    # GENERATE DESIGN DESCRIPTION
-    # --------------------------------------
-
-    description = (
-        f"A beautifully styled {fabric.lower()} "
-        f"{garment.lower()} designed for {occasion}. "
-        f"The garment features a coordinated color "
-        f"palette and a modern silhouette. "
-        f"Inspired by your idea: "
-        f"{request.description.strip()}"
+    # Generate the suggestion using our
+    # free local fashion_suggestions.py module.
+    suggestion_data = generate_fashion_suggestion(
+        request.description
     )
 
-    # --------------------------------------
-    # CREATE SUGGESTION RESPONSE
-    # --------------------------------------
-
+    # Validate garment, color, fabric,
+    # and description before returning.
     suggestion = AIDesignSuggestion(
-        garment=garment,
-        color=color,
-        fabric=fabric,
-        description=description,
+        **suggestion_data
     )
 
     return AIDesignResponse(

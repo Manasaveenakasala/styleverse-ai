@@ -56,7 +56,7 @@ export default function SavedDesigns({
 
   // ========================================
   // LOAD SAVED DESIGNS
-  // ========================================
+  // ==========================================
 
   useEffect(() => {
     let active = true
@@ -95,7 +95,7 @@ export default function SavedDesigns({
 
   // ========================================
   // FAVORITE COUNT
-  // ========================================
+  // ==========================================
 
   const favoriteCount = designs.filter(
     (design) => design.is_favorite === 1
@@ -103,7 +103,7 @@ export default function SavedDesigns({
 
   // ========================================
   // SEARCH, FILTER AND SORT
-  // ========================================
+  // ==========================================
 
   const filteredDesigns = designs
     .filter((design) => {
@@ -151,7 +151,7 @@ export default function SavedDesigns({
 
   // ========================================
   // TOGGLE FAVORITE
-  // ========================================
+  // ==========================================
 
   async function handleToggleFavorite(design: SavedDesign) {
     if (
@@ -195,7 +195,7 @@ export default function SavedDesigns({
 
   // ========================================
   // DELETE DESIGN
-  // ========================================
+  // ==========================================
 
   async function handleDeleteDesign(designId: number) {
     if (
@@ -238,7 +238,7 @@ export default function SavedDesigns({
 
   // ========================================
   // LOAD DESIGN INTO STUDIO
-  // ========================================
+  // ==========================================
 
   function handleLoadDesign(design: SavedDesign) {
     onLoadDesign(design)
@@ -251,8 +251,62 @@ export default function SavedDesigns({
   }
 
   // ========================================
-  // RESET SEARCH AND FILTERS
+  // DOWNLOAD DESIGN AS JSON
+  // ==========================================
+
+  function handleDownloadDesign(design: SavedDesign) {
+    try {
+      const exportData = {
+        id: design.id,
+        garment: design.garment,
+        color: design.color,
+        fabric: design.fabric,
+        description: design.description,
+        created_at: design.created_at,
+        is_favorite: design.is_favorite === 1,
+      }
+
+      const json = JSON.stringify(exportData, null, 2)
+
+      const blob = new Blob([json], {
+        type: 'application/json',
+      })
+
+      const url = URL.createObjectURL(blob)
+
+      try {
+        const link = document.createElement('a')
+
+        link.href = url
+        link.download =
+          `styleverse-${design.garment.toLowerCase()}-${design.id}.json`
+
+        document.body.appendChild(link)
+
+        try {
+          link.click()
+        } finally {
+          link.remove()
+        }
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+
+      setSuccessMessage('Design download started!')
+      setError('')
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to download design.'
+      )
+      setSuccessMessage('')
+    }
+  }
+
   // ========================================
+  // CLEAR FILTERS
+  // ==========================================
 
   function handleClearFilters() {
     setSearchQuery('')
@@ -263,7 +317,7 @@ export default function SavedDesigns({
 
   // ========================================
   // RENDER
-  // ========================================
+  // ==========================================
 
   return (
     <section className="saved-designs">
@@ -273,7 +327,7 @@ export default function SavedDesigns({
         <h2>My Saved Designs</h2>
 
         <p>
-          Search, filter, organize and customize
+          Search, organize, customize and download
           your saved fashion designs.
         </p>
       </div>
@@ -501,9 +555,7 @@ export default function SavedDesigns({
                           : ''
                       }`}
                       onClick={() =>
-                        void handleToggleFavorite(
-                          design
-                        )
+                        void handleToggleFavorite(design)
                       }
                       disabled={
                         updatingFavoriteId !== null ||
@@ -531,6 +583,19 @@ export default function SavedDesigns({
                       }
                     >
                       Load in Studio
+                    </button>
+
+                    {/* NEW: DOWNLOAD JSON */}
+
+                    <button
+                      type="button"
+                      className="download-button"
+                      onClick={() =>
+                        handleDownloadDesign(design)
+                      }
+                      aria-label={`Download ${design.garment} design ${design.id} as JSON`}
+                    >
+                      ↓ Download JSON
                     </button>
 
                     <button

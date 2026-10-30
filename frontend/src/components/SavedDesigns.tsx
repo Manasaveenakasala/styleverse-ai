@@ -19,6 +19,16 @@ type SavedDesignsProps = {
 
 type DesignFilter = 'all' | 'favorites'
 
+type SortOption = 'newest' | 'oldest' | 'name'
+
+type GarmentFilter =
+  | 'all'
+  | 'Dress'
+  | 'Jacket'
+  | 'Shirt'
+  | 'Skirt'
+  | 'Pants'
+
 // ==========================================
 // SAVED DESIGNS COMPONENT
 // ==========================================
@@ -35,6 +45,11 @@ export default function SavedDesigns({
     useState<number | null>(null)
 
   const [filter, setFilter] = useState<DesignFilter>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [garmentFilter, setGarmentFilter] =
+    useState<GarmentFilter>('all')
+  const [sortOption, setSortOption] =
+    useState<SortOption>('newest')
 
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -47,6 +62,8 @@ export default function SavedDesigns({
     let active = true
 
     async function loadDesigns() {
+      setIsLoading(true)
+
       try {
         const savedDesigns = await getSavedDesigns()
 
@@ -77,24 +94,70 @@ export default function SavedDesigns({
   }, [refreshKey])
 
   // ========================================
-  // FILTER DESIGNS
+  // FAVORITE COUNT
   // ========================================
 
   const favoriteCount = designs.filter(
     (design) => design.is_favorite === 1
   ).length
 
-  const filteredDesigns =
-    filter === 'favorites'
-      ? designs.filter((design) => design.is_favorite === 1)
-      : designs
+  // ========================================
+  // SEARCH, FILTER AND SORT
+  // ========================================
+
+  const filteredDesigns = designs
+    .filter((design) => {
+      if (filter === 'favorites') {
+        return design.is_favorite === 1
+      }
+
+      return true
+    })
+    .filter((design) => {
+      if (garmentFilter === 'all') {
+        return true
+      }
+
+      return design.garment === garmentFilter
+    })
+    .filter((design) => {
+      const query = searchQuery.trim().toLowerCase()
+
+      if (!query) {
+        return true
+      }
+
+      return (
+        design.garment.toLowerCase().includes(query) ||
+        design.fabric.toLowerCase().includes(query) ||
+        design.description.toLowerCase().includes(query) ||
+        design.color.toLowerCase().includes(query)
+      )
+    })
+    .sort((a, b) => {
+      if (sortOption === 'oldest') {
+        return a.id - b.id
+      }
+
+      if (sortOption === 'name') {
+        return (
+          a.garment.localeCompare(b.garment) ||
+          b.id - a.id
+        )
+      }
+
+      return b.id - a.id
+    })
 
   // ========================================
   // TOGGLE FAVORITE
   // ========================================
 
   async function handleToggleFavorite(design: SavedDesign) {
-    if (updatingFavoriteId !== null || deletingId !== null) {
+    if (
+      updatingFavoriteId !== null ||
+      deletingId !== null
+    ) {
       return
     }
 
@@ -112,7 +175,9 @@ export default function SavedDesigns({
 
       setDesigns((previous) =>
         previous.map((item) =>
-          item.id === design.id ? response.design : item
+          item.id === design.id
+            ? response.design
+            : item
         )
       )
 
@@ -133,7 +198,10 @@ export default function SavedDesigns({
   // ========================================
 
   async function handleDeleteDesign(designId: number) {
-    if (deletingId !== null || updatingFavoriteId !== null) {
+    if (
+      deletingId !== null ||
+      updatingFavoriteId !== null
+    ) {
       return
     }
 
@@ -151,7 +219,9 @@ export default function SavedDesigns({
       await deleteDesign(designId)
 
       setDesigns((previous) =>
-        previous.filter((design) => design.id !== designId)
+        previous.filter(
+          (design) => design.id !== designId
+        )
       )
 
       setSuccessMessage('Design deleted successfully!')
@@ -181,21 +251,34 @@ export default function SavedDesigns({
   }
 
   // ========================================
+  // RESET SEARCH AND FILTERS
+  // ========================================
+
+  function handleClearFilters() {
+    setSearchQuery('')
+    setGarmentFilter('all')
+    setSortOption('newest')
+    setFilter('all')
+  }
+
+  // ========================================
   // RENDER
   // ========================================
 
   return (
     <section className="saved-designs">
+      {/* HEADER */}
+
       <div className="saved-designs-header">
         <h2>My Saved Designs</h2>
 
         <p>
-          Browse your creations, mark favorites,
-          and load designs into your 3D Studio.
+          Search, filter, organize and customize
+          your saved fashion designs.
         </p>
       </div>
 
-      {/* FILTER BUTTONS */}
+      {/* ALL / FAVORITES FILTER */}
 
       <div
         className="saved-design-filters"
@@ -225,13 +308,77 @@ export default function SavedDesigns({
         </button>
       </div>
 
-      {/* LOADING STATE */}
+      {/* SEARCH, GARMENT FILTER AND SORT */}
 
-      {isLoading && (
-        <p role="status">Loading saved designs...</p>
+      <div className="design-search-controls">
+        <input
+          type="search"
+          placeholder="Search by garment, fabric or description..."
+          aria-label="Search saved designs"
+          value={searchQuery}
+          onChange={(event) =>
+            setSearchQuery(event.target.value)
+          }
+        />
+
+        <select
+          aria-label="Filter by garment"
+          value={garmentFilter}
+          onChange={(event) =>
+            setGarmentFilter(
+              event.target.value as GarmentFilter
+            )
+          }
+        >
+          <option value="all">All Garments</option>
+          <option value="Dress">Dresses</option>
+          <option value="Jacket">Jackets</option>
+          <option value="Shirt">Shirts</option>
+          <option value="Skirt">Skirts</option>
+          <option value="Pants">Pants</option>
+        </select>
+
+        <select
+          aria-label="Sort saved designs"
+          value={sortOption}
+          onChange={(event) =>
+            setSortOption(
+              event.target.value as SortOption
+            )
+          }
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name">Garment Name (A–Z)</option>
+        </select>
+
+        <button
+          type="button"
+          className="filter-button"
+          onClick={handleClearFilters}
+        >
+          Clear Filters
+        </button>
+      </div>
+
+      {/* RESULTS COUNT */}
+
+      {!isLoading && !error && (
+        <p role="status">
+          Showing {filteredDesigns.length} of{' '}
+          {designs.length} saved designs
+        </p>
       )}
 
-      {/* ERROR MESSAGE */}
+      {/* LOADING */}
+
+      {isLoading && (
+        <p role="status">
+          Loading saved designs...
+        </p>
+      )}
+
+      {/* ERROR */}
 
       {error && (
         <p className="design-error" role="alert">
@@ -239,143 +386,176 @@ export default function SavedDesigns({
         </p>
       )}
 
-      {/* SUCCESS MESSAGE */}
+      {/* SUCCESS */}
 
       {successMessage && (
-        <p className="suggestion-success" role="status">
+        <p
+          className="suggestion-success"
+          role="status"
+        >
           {successMessage}
         </p>
       )}
 
-      {/* EMPTY STATES */}
-
-      {!isLoading && !error && designs.length === 0 && (
-        <div className="saved-designs-empty">
-          <p>No saved designs yet.</p>
-          <p>Create your first fashion design in the studio!</p>
-        </div>
-      )}
+      {/* NO SAVED DESIGNS */}
 
       {!isLoading &&
-        designs.length > 0 &&
-        filteredDesigns.length === 0 && (
+        !error &&
+        designs.length === 0 && (
           <div className="saved-designs-empty">
-            <p>No favorite designs yet.</p>
+            <p>No saved designs yet.</p>
+
             <p>
-              Click the heart button on any design
-              to add it to your favorites.
+              Create your first fashion design
+              in the studio!
             </p>
           </div>
         )}
 
-      {/* SAVED DESIGN CARDS */}
+      {/* NO SEARCH RESULTS */}
 
-      {!isLoading && filteredDesigns.length > 0 && (
-        <div className="saved-designs-grid">
-          {filteredDesigns.map((design) => {
-            const isFavorite = design.is_favorite === 1
-            const isUpdating =
-              updatingFavoriteId === design.id
+      {!isLoading &&
+        !error &&
+        designs.length > 0 &&
+        filteredDesigns.length === 0 && (
+          <div className="saved-designs-empty">
+            <p>No designs match your filters.</p>
 
-            return (
-              <div
-                key={design.id}
-                className="saved-design-card"
-              >
-                {/* COLOR PREVIEW */}
+            <p>
+              Try another search or clear
+              your filters.
+            </p>
 
+            <button
+              type="button"
+              className="filter-button"
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
+
+      {/* DESIGN CARDS */}
+
+      {!isLoading &&
+        filteredDesigns.length > 0 && (
+          <div className="saved-designs-grid">
+            {filteredDesigns.map((design) => {
+              const isFavorite =
+                design.is_favorite === 1
+
+              const isUpdating =
+                updatingFavoriteId === design.id
+
+              return (
                 <div
-                  className="saved-design-color"
-                  style={{
-                    backgroundColor: design.color,
-                  }}
-                />
+                  key={design.id}
+                  className="saved-design-card"
+                >
+                  {/* COLOR PREVIEW */}
 
-                {/* DESIGN INFORMATION */}
+                  <div
+                    className="saved-design-color"
+                    style={{
+                      backgroundColor: design.color,
+                    }}
+                  />
 
-                <div className="saved-design-info">
-                  <h3>
-                    {design.garment} #{design.id}
-                  </h3>
+                  {/* DESIGN DETAILS */}
 
-                  <p>
-                    <strong>Fabric:</strong> {design.fabric}
-                  </p>
+                  <div className="saved-design-info">
+                    <h3>
+                      {design.garment} #{design.id}
+                    </h3>
 
-                  <p>
-                    <strong>Color:</strong>{' '}
-                    {design.color.toUpperCase()}
-                  </p>
+                    <p>
+                      <strong>Fabric:</strong>{' '}
+                      {design.fabric}
+                    </p>
 
-                  <p>
-                    <strong>Description:</strong>{' '}
-                    {design.description}
-                  </p>
+                    <p>
+                      <strong>Color:</strong>{' '}
+                      {design.color.toUpperCase()}
+                    </p>
 
-                  <p>
-                    <strong>Created:</strong>{' '}
-                    {design.created_at}
-                  </p>
+                    <p>
+                      <strong>Description:</strong>{' '}
+                      {design.description}
+                    </p>
+
+                    <p>
+                      <strong>Created:</strong>{' '}
+                      {design.created_at}
+                    </p>
+                  </div>
+
+                  {/* ACTION BUTTONS */}
+
+                  <div className="saved-design-actions">
+                    <button
+                      type="button"
+                      className={`favorite-button ${
+                        isFavorite
+                          ? 'is-favorite'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        void handleToggleFavorite(
+                          design
+                        )
+                      }
+                      disabled={
+                        updatingFavoriteId !== null ||
+                        deletingId !== null
+                      }
+                      aria-pressed={isFavorite}
+                      aria-label={
+                        isFavorite
+                          ? 'Remove from favorites'
+                          : 'Add to favorites'
+                      }
+                    >
+                      {isUpdating
+                        ? 'Updating...'
+                        : isFavorite
+                          ? '♥ Favorited'
+                          : '♡ Favorite'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() =>
+                        handleLoadDesign(design)
+                      }
+                    >
+                      Load in Studio
+                    </button>
+
+                    <button
+                      type="button"
+                      className="delete-button"
+                      onClick={() =>
+                        void handleDeleteDesign(
+                          design.id
+                        )
+                      }
+                      disabled={
+                        deletingId !== null ||
+                        updatingFavoriteId !== null
+                      }
+                    >
+                      {deletingId === design.id
+                        ? 'Deleting...'
+                        : 'Delete Design'}
+                    </button>
+                  </div>
                 </div>
-
-                {/* DESIGN ACTIONS */}
-
-                <div className="saved-design-actions">
-                  <button
-                    type="button"
-                    className={`favorite-button ${
-                      isFavorite ? 'is-favorite' : ''
-                    }`}
-                    onClick={() =>
-                      void handleToggleFavorite(design)
-                    }
-                    disabled={
-                      updatingFavoriteId !== null ||
-                      deletingId !== null
-                    }
-                    aria-pressed={isFavorite}
-                    aria-label={
-                      isFavorite
-                        ? 'Remove from favorites'
-                        : 'Add to favorites'
-                    }
-                  >
-                    {isUpdating
-                      ? 'Updating...'
-                      : isFavorite
-                        ? '♥ Favorited'
-                        : '♡ Favorite'}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => handleLoadDesign(design)}
-                  >
-                    Load in Studio
-                  </button>
-
-                  <button
-                    type="button"
-                    className="delete-button"
-                    onClick={() =>
-                      void handleDeleteDesign(design.id)
-                    }
-                    disabled={
-                      deletingId !== null ||
-                      updatingFavoriteId !== null
-                    }
-                  >
-                    {deletingId === design.id
-                      ? 'Deleting...'
-                      : 'Delete Design'}
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
     </section>
   )
 }

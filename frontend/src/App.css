@@ -938,5 +938,28 @@ footer {
   margin-top: 16px;
 }
 
+.design-search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
 
+.design-search-controls input,
+.design-search-controls select {
+  padding: 12px 14px;
+  border: 1px solid #d8c6d0;
+  border-radius: 8px;
+  background: white;
+  color: #53364a;
+  font-size: 14px;
+}
+
+.design-search-controls input {
+  flex: 1 1 240px;
+}
+
+.design-search-controls select {
+  flex: 1 1 150px;
+}
 

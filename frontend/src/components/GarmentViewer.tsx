@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 
@@ -83,7 +84,11 @@ function Jacket({ color, fabric }: GarmentMaterialProps) {
 
       <mesh position={[0, 0, 0.22]}>
         <boxGeometry args={[0.06, 1.8, 0.05]} />
-        <meshStandardMaterial color="#ffffff" metalness={0.4} roughness={0.3} />
+        <meshStandardMaterial
+          color="#ffffff"
+          metalness={0.4}
+          roughness={0.3}
+        />
       </mesh>
     </group>
   );
@@ -149,27 +154,74 @@ export default function GarmentViewer({
   fabric = "Cotton",
 }: GarmentViewerProps) {
   const [autoRotate, setAutoRotate] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+
+  const viewerRef = useRef<HTMLDivElement>(null);
 
   function toggleRotation() {
     setAutoRotate((previous) => !previous);
   }
 
+  // Download the currently rendered 3D garment as PNG
+  function handleDownloadPNG() {
+    setDownloadError("");
+
+    try {
+      const canvas = viewerRef.current?.querySelector("canvas");
+
+      if (!canvas) {
+        throw new Error("3D canvas not found.");
+      }
+
+      const imageUrl = canvas.toDataURL("image/png");
+
+      if (!imageUrl.startsWith("data:image/png")) {
+        throw new Error("Could not generate PNG image.");
+      }
+
+      const link = document.createElement("a");
+
+      link.href = imageUrl;
+      link.download = `styleverse-${garment.toLowerCase()}.png`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("PNG download failed:", error);
+      setDownloadError(
+        "Unable to download the 3D preview. Please try again."
+      );
+    }
+  }
+
   return (
     <div className="garment-viewer-container">
-      <div className="garment-viewer">
+      <div className="garment-viewer" ref={viewerRef}>
         <Canvas
           camera={{
             position: [0, 0, 7],
             fov: 45,
           }}
+          gl={{
+            preserveDrawingBuffer: true,
+            antialias: true,
+            alpha: false,
+          }}
         >
+          <color attach="background" args={["#ffffff"]} />
+
           <ambientLight intensity={1.5} />
 
           <directionalLight position={[5, 5, 5]} intensity={2} />
 
           <directionalLight position={[-4, 2, -3]} intensity={0.7} />
 
-          <GarmentModel garment={garment} color={color} fabric={fabric} />
+          <GarmentModel
+            garment={garment}
+            color={color}
+            fabric={fabric}
+          />
 
           <OrbitControls
             enablePan={false}
@@ -182,14 +234,30 @@ export default function GarmentViewer({
         </Canvas>
       </div>
 
-      <button
-        type="button"
-        className="rotation-button"
-        onClick={toggleRotation}
-        aria-pressed={autoRotate}
-      >
-        {autoRotate ? "Stop Rotation" : "Auto Rotate"}
-      </button>
+      <div className="garment-viewer-actions">
+        <button
+          type="button"
+          className="rotation-button"
+          onClick={toggleRotation}
+          aria-pressed={autoRotate}
+        >
+          {autoRotate ? "Stop Rotation" : "Auto Rotate"}
+        </button>
+
+        <button
+          type="button"
+          className="download-button"
+          onClick={handleDownloadPNG}
+        >
+          📸 Download 3D Preview (PNG)
+        </button>
+      </div>
+
+      {downloadError && (
+        <p className="design-error" role="alert">
+          {downloadError}
+        </p>
+      )}
     </div>
   );
 }

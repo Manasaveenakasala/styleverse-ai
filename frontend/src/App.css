@@ -984,3 +984,22 @@ footer {
   outline-offset: 2px;
 }
 
+/* Garment viewer controls */
+
+.garment-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.garment-viewer-actions button {
+  min-height: 42px;
+}
+
+.garment-viewer-actions button:focus-visible {
+  outline: 3px solid #a78bfa;
+  outline-offset: 2px;
+}

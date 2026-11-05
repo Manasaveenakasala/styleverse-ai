@@ -1,6 +1,7 @@
-/* =========================================
-   STYLEVERSE AI — GLOBAL LAYOUT
-========================================= */
+
+/* ==========================================
+   STYLEVERSE AI — GLOBAL STYLES
+========================================== */
 
 * {
   box-sizing: border-box;
@@ -10,11 +11,37 @@
   min-height: 100vh;
   background: #faf8f6;
   color: #251b27;
+  overflow-x: clip;
 }
 
-/* =========================================
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #a53d78;
+  outline-offset: 2px;
+}
+
+/* ==========================================
    NAVIGATION
-========================================= */
+========================================== */
 
 .app > header,
 .navbar {
@@ -38,21 +65,23 @@
   gap: 28px;
 }
 
-.app > header nav a {
+.app > header nav a,
+.navbar nav a {
   color: #554b57;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s ease;
 }
 
+.app > header nav a:hover,
+.navbar nav a:hover {
+  color: #a53d78;
+}
+
 .app > header nav > a:first-child {
   color: #a53d78;
   font-size: 24px;
   font-weight: 800;
-}
-
-.app > header nav a:hover {
-  color: #a53d78;
 }
 
 .navbar {
@@ -64,9 +93,9 @@
 }
 
 .brand {
+  color: #251b27;
   font-size: 24px;
   font-weight: 800;
-  color: #251b27;
   text-decoration: none;
 }
 
@@ -77,31 +106,26 @@
 
 .navbar nav {
   display: flex;
+  align-items: center;
   gap: 28px;
 }
 
-.navbar nav a {
-  color: #554b57;
-  text-decoration: none;
-}
-
-/* =========================================
+/* ==========================================
    BUTTONS
-========================================= */
+========================================== */
 
 .nav-button,
 .primary-button {
   display: inline-block;
-  background: #a53d78;
-  color: #ffffff;
+  min-height: 44px;
   padding: 13px 22px;
   border: none;
   border-radius: 8px;
-  text-decoration: none;
-  font: inherit;
+  background: #a53d78;
+  color: #ffffff;
   font-weight: 600;
   text-align: center;
-  cursor: pointer;
+  text-decoration: none;
   transition:
     background-color 0.2s ease,
     transform 0.2s ease;
@@ -117,24 +141,17 @@
   margin-top: 20px;
 }
 
-.primary-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* =========================================
+/* ==========================================
    HOME — HERO SECTION
-========================================= */
+========================================== */
 
 .hero {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
   gap: 50px;
-  padding: 100px 7%;
   min-height: 600px;
+  padding: 100px 7%;
 }
 
 .eyebrow {
@@ -145,9 +162,9 @@
 }
 
 .hero h1 {
+  margin: 20px 0;
   font-size: clamp(44px, 5vw, 76px);
   line-height: 1.12;
-  margin: 20px 0;
 }
 
 .hero-content > p,
@@ -163,8 +180,8 @@
   align-items: center;
   gap: 8px;
   margin-top: 30px;
-  font-size: 13px;
   color: #706575;
+  font-size: 13px;
 }
 
 .status-dot {
@@ -178,31 +195,36 @@
   background: #36a269;
 }
 
-/* =========================================
+/* ==========================================
    HOME — FASHION VISUAL
-========================================= */
+========================================== */
 
 .hero-visual {
-  min-height: 430px;
   display: grid;
   place-items: center;
+  min-height: 430px;
   border-radius: 30px;
-  background: linear-gradient(145deg, #e8c7d8, #f4e9ef, #c6a5be);
+  background: linear-gradient(
+    145deg,
+    #e8c7d8,
+    #f4e9ef,
+    #c6a5be
+  );
 }
 
 .fashion-card {
   width: 75%;
   padding: 50px 30px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.7);
   border: 1px solid #ffffff;
   border-radius: 24px;
+  background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 20px 60px rgba(79, 33, 66, 0.12);
+  text-align: center;
 }
 
 .fashion-icon {
-  font-size: 70px;
   color: #a53d78;
+  font-size: 70px;
 }
 
 .fashion-card h2 {
@@ -214,9 +236,9 @@
   color: #78677a;
 }
 
-/* =========================================
+/* ==========================================
    HOME — FEATURES, WORKSPACE, ABOUT
-========================================= */
+========================================== */
 
 .features,
 .workspace,
@@ -244,9 +266,9 @@
 
 .feature-card {
   padding: 35px;
-  background: #faf6f9;
   border: 1px solid #f0e4ec;
   border-radius: 18px;
+  background: #faf6f9;
   text-align: left;
 }
 
@@ -273,8 +295,8 @@
   border: 1px solid #a53d78;
   border-radius: 8px;
   color: #a53d78;
-  font-weight: 700;
   font-size: 12px;
+  font-weight: 700;
   letter-spacing: 1px;
 }
 
@@ -283,26 +305,27 @@
   margin: auto;
 }
 
-/* =========================================
+/* ==========================================
    DESIGN STUDIO PAGE
-========================================= */
+========================================== */
 
 .studio-page {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 48px 32px 80px;
 }
 
 .studio-header {
-  text-align: center;
   margin-bottom: 48px;
+  text-align: center;
 }
 
 .studio-header h1 {
-  font-size: clamp(32px, 5vw, 52px);
-  line-height: 1.2;
   margin-bottom: 16px;
   color: #352334;
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1.2;
 }
 
 .studio-header p {
@@ -311,15 +334,15 @@
   line-height: 1.7;
 }
 
-/* =========================================
-   DESIGN WORKSPACE — TWO COLUMNS
-========================================= */
+/* ==========================================
+   DESIGN WORKSPACE
+========================================== */
 
 .design-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 32px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
+  gap: 32px;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -332,16 +355,17 @@
 
 .design-controls,
 .design-preview {
-  background: #ffffff;
+  min-width: 0;
+  padding: 32px;
   border: 1px solid #f0dce7;
   border-radius: 20px;
-  padding: 32px;
+  background: #ffffff;
   box-shadow: 0 8px 30px rgba(79, 33, 66, 0.06);
 }
 
-/* =========================================
+/* ==========================================
    DESIGN CONTROLS
-========================================= */
+========================================== */
 
 .design-controls {
   display: flex;
@@ -350,23 +374,23 @@
 }
 
 .design-controls h2 {
-  font-size: 30px;
-  line-height: 1.3;
   margin: 14px 0;
   color: #352334;
+  font-size: 30px;
+  line-height: 1.3;
 }
 
 .design-controls > p {
+  margin-bottom: 12px;
   color: #746575;
   line-height: 1.6;
-  margin-bottom: 12px;
 }
 
 .design-controls label {
   display: block;
-  font-weight: 600;
-  color: #493447;
   margin: 20px 0 8px;
+  color: #493447;
+  font-weight: 600;
 }
 
 .design-controls select,
@@ -378,13 +402,6 @@
   border-radius: 8px;
   background: #ffffff;
   color: #251b27;
-  font: inherit;
-}
-
-.design-controls select:focus,
-.design-controls textarea:focus {
-  outline: 2px solid #a53d78;
-  outline-offset: 2px;
 }
 
 .design-controls textarea {
@@ -400,7 +417,6 @@
   border: 1px solid #dccbd5;
   border-radius: 10px;
   background: #ffffff;
-  cursor: pointer;
 }
 
 .design-controls .primary-button {
@@ -409,15 +425,14 @@
   padding: 15px 24px;
 }
 
-/* =========================================
-   SPRINT 2 — COLOR PRESETS
-========================================= */
+/* ==========================================
+   COLOR PRESETS
+========================================== */
 
 .design-controls .color-presets {
   display: flex;
-  flex-direction: row;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
   gap: 12px;
   margin: 14px 0 22px;
 }
@@ -427,13 +442,10 @@
   flex: 0 0 38px;
   width: 38px;
   height: 38px;
-  min-width: 38px;
-  min-height: 38px;
   padding: 0;
   border: 2px solid #ddd1d9;
   border-radius: 50%;
   appearance: none;
-  cursor: pointer;
   transition: transform 0.2s ease;
 }
 
@@ -446,32 +458,28 @@
   outline-offset: 3px;
 }
 
-.design-controls .color-presets .color-swatch:focus-visible {
-  outline: 3px solid #251b27;
-  outline-offset: 3px;
-}
-
-/* =========================================
+/* ==========================================
    DESIGN PREVIEW
-========================================= */
+========================================== */
 
 .design-preview {
   min-height: 480px;
 }
 
 .preview-canvas {
+  min-width: 0;
   margin-top: 20px;
   padding: 20px;
-  background: #faf6f9;
   border: 1px dashed #dccbd5;
   border-radius: 16px;
+  background: #faf6f9;
   text-align: center;
 }
 
 .preview-canvas h3 {
   margin: 16px 0 8px;
-  font-size: 24px;
   color: #352334;
+  font-size: 24px;
 }
 
 .preview-canvas p {
@@ -480,43 +488,58 @@
   overflow-wrap: anywhere;
 }
 
-/* =========================================
+/* ==========================================
    INTERACTIVE 3D GARMENT VIEWER
-========================================= */
+========================================== */
 
 .garment-viewer-container {
   width: 100%;
+  min-width: 0;
 }
 
 .garment-viewer {
   width: 100%;
   height: 350px;
   margin: 0 auto 24px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f8f0f5, #e9dbe5);
   overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    #f8f0f5,
+    #e9dbe5
+  );
 }
 
 .garment-viewer canvas {
   display: block;
+  max-width: 100%;
 }
 
-/* =========================================
-   AUTO ROTATE BUTTON
-========================================= */
+.garment-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.garment-viewer-actions button {
+  flex: 1 1 170px;
+  min-height: 44px;
+}
 
 .rotation-button {
   display: block;
+  min-height: 44px;
   margin: 0 auto 20px;
   padding: 12px 26px;
-  background: #a53d78;
-  color: #ffffff;
   border: none;
   border-radius: 25px;
-  font: inherit;
+  background: #a53d78;
+  color: #ffffff;
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
   transition:
     background-color 0.2s ease,
     transform 0.2s ease;
@@ -527,26 +550,24 @@
   transform: translateY(-1px);
 }
 
-.rotation-button:focus-visible {
-  outline: 3px solid #251b27;
-  outline-offset: 3px;
+.garment-viewer-actions .rotation-button {
+  margin: 0;
 }
 
-/* =========================================
-   SPRINT 2 — RESET DESIGN BUTTON
-========================================= */
+/* ==========================================
+   RESET DESIGN BUTTON
+========================================== */
 
 .reset-button {
   width: 100%;
+  min-height: 44px;
   margin-top: 12px;
   padding: 13px 22px;
-  background: #ffffff;
-  color: #a53d78;
   border: 1px solid #a53d78;
   border-radius: 8px;
-  font: inherit;
+  background: #ffffff;
+  color: #a53d78;
   font-weight: 600;
-  cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
@@ -554,28 +575,23 @@
   background: #f9eaf2;
 }
 
-.reset-button:focus-visible {
-  outline: 3px solid #a53d78;
-  outline-offset: 3px;
-}
-
-/* =========================================
+/* ==========================================
    DESIGN RESULT
-========================================= */
+========================================== */
 
 .preview-note {
   margin-top: 20px;
   padding: 20px;
-  background: #f9eaf2;
   border: 1px solid #edcfe0;
   border-radius: 12px;
+  background: #f9eaf2;
   color: #59324c;
 }
 
 .preview-note h3 {
   margin: 0 0 10px;
-  font-size: 18px;
   color: #278354;
+  font-size: 18px;
 }
 
 .preview-note p {
@@ -584,143 +600,22 @@
   overflow-wrap: anywhere;
 }
 
-/* =========================================
-   FOOTER
-========================================= */
-
-footer {
-  padding: 25px;
-  background: #251b27;
-  color: #ffffff;
-  text-align: center;
-}
-
-/* =========================================
-   TABLET RESPONSIVENESS
-========================================= */
-
-@media (max-width: 850px) {
-  .design-workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .design-controls,
-  .design-preview {
-    padding: 24px;
-  }
-
-  .hero {
-    grid-template-columns: 1fr;
-    padding-top: 60px;
-  }
-
-  .feature-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-visual {
-    min-height: 320px;
-  }
-}
-
-/* =========================================
-   MOBILE RESPONSIVENESS
-========================================= */
-
-@media (max-width: 640px) {
-  .app > header nav {
-    padding: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .app > header nav > div {
-    width: 100%;
-    justify-content: center;
-    gap: 24px;
-  }
-
-  .navbar {
-    flex-wrap: wrap;
-  }
-
-  .navbar nav {
-    width: 100%;
-    justify-content: center;
-    gap: 18px;
-  }
-
-  .hero {
-    padding: 60px 6%;
-    gap: 32px;
-  }
-
-  .hero h1 {
-    font-size: 42px;
-  }
-
-  .features,
-  .workspace,
-  .about {
-    padding: 60px 6%;
-  }
-
-  .studio-page {
-    padding: 32px 16px 60px;
-  }
-
-  .studio-header {
-    margin-bottom: 32px;
-  }
-
-  .design-workspace {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .design-controls,
-  .design-preview {
-    padding: 20px;
-  }
-
-  .preview-canvas {
-    padding: 12px;
-  }
-
-  .garment-viewer {
-    height: 300px;
-  }
-
-  .design-controls .color-presets {
-    gap: 10px;
-  }
-
-  .design-controls .color-presets .color-swatch {
-    flex-basis: 34px;
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
-  }
-}
-
-
-/* =========================================
-   SPRINT 2 — ENHANCED DESIGN DETAILS
-========================================= */
+/* ==========================================
+   DESIGN DETAILS
+========================================== */
 
 .design-details {
   margin-top: 20px;
   padding: 22px;
-  background: #ffffff;
   border: 1px solid #f0dce7;
   border-radius: 14px;
+  background: #ffffff;
 }
 
 .design-details h3 {
   margin: 0 0 18px;
-  font-size: 20px;
   color: #352334;
+  font-size: 20px;
 }
 
 .design-detail-row {
@@ -751,9 +646,9 @@ footer {
 
 .design-color-indicator {
   display: inline-block;
+  flex-shrink: 0;
   width: 22px;
   height: 22px;
-  flex-shrink: 0;
   border: 1px solid #dccbd5;
   border-radius: 50%;
 }
@@ -769,8 +664,9 @@ footer {
   overflow-wrap: anywhere;
 }
 
-
-/* Sprint 3 — Backend connection indicator */
+/* ==========================================
+   BACKEND STATUS & MESSAGES
+========================================== */
 
 .backend-status {
   width: fit-content;
@@ -785,54 +681,67 @@ footer {
   text-align: center;
 }
 
-
-/* Sprint 3 — API error message */
-
 .design-error {
   margin-top: 14px;
   padding: 12px 16px;
-  background: #fff0f0;
   border: 1px solid #f1b6b6;
   border-radius: 8px;
+  background: #fff0f0;
   color: #a12727;
   font-size: 14px;
   line-height: 1.5;
 }
 
-
-/* Saved Designs */
+/* ==========================================
+   SAVED DESIGNS
+========================================== */
 
 .saved-designs {
-  margin: 40px auto;
+  width: 100%;
   max-width: 1200px;
+  margin: 40px auto;
   padding: 24px;
 }
 
 .saved-designs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 20px;
   margin-top: 24px;
 }
 
 .saved-design-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
   padding: 20px;
   border: 1px solid #e5e5e5;
   border-radius: 14px;
-  background: #fff;
+  background: #ffffff;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
 }
 
 .saved-design-color {
+  width: 100%;
+  min-height: 56px;
   margin-bottom: 14px;
+  border: 1px solid #e8dce4;
+  border-radius: 10px;
 }
 
 .saved-design-swatch {
   display: inline-block;
   width: 48px;
   height: 48px;
-  border-radius: 50%;
   border: 2px solid #ddd;
+  border-radius: 50%;
+}
+
+.saved-design-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .saved-design-card h3 {
@@ -844,36 +753,9 @@ footer {
   overflow-wrap: anywhere;
 }
 
-
-/* Saved design delete button */
-
-.delete-design-button {
-  margin-top: 16px;
-  padding: 10px 16px;
-  width: 100%;
-  border: 1px solid #dc3545;
-  border-radius: 8px;
-  background-color: #fff;
-  color: #dc3545;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.delete-design-button:hover:not(:disabled) {
-  background-color: #dc3545;
-  color: #fff;
-}
-
-.delete-design-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* ==========================================
-   SAVED DESIGN FAVORITES
-   ========================================== */
+   SAVED DESIGN FILTERS
+========================================== */
 
 .saved-design-filters {
   display: flex;
@@ -883,15 +765,15 @@ footer {
 }
 
 .filter-button {
+  min-height: 44px;
   padding: 10px 18px;
   border: 1px solid #d8c6d0;
   border-radius: 8px;
-  background: #fff;
+  background: #ffffff;
   color: #53364a;
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .filter-button:hover {
@@ -899,21 +781,25 @@ footer {
 }
 
 .filter-button.active {
-  background: #a53d78;
-  color: #fff;
   border-color: #a53d78;
+  background: #a53d78;
+  color: #ffffff;
 }
 
+/* ==========================================
+   FAVORITE BUTTON
+========================================== */
+
 .favorite-button {
+  min-height: 44px;
   padding: 10px 16px;
   border: 1px solid #d8c6d0;
   border-radius: 8px;
-  background: #fff;
+  background: #ffffff;
   color: #a53d78;
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .favorite-button:hover:not(:disabled) {
@@ -921,22 +807,33 @@ footer {
 }
 
 .favorite-button.is-favorite {
-  background: #fce7f1;
   border-color: #a53d78;
+  background: #fce7f1;
   color: #96265f;
 }
 
-.favorite-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* ==========================================
+   SAVED DESIGN ACTIONS
+========================================== */
 
 .saved-design-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: auto;
+  padding-top: 16px;
 }
+
+.saved-design-actions button {
+  flex: 1 1 140px;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+/* ==========================================
+   SEARCH & SORT CONTROLS
+========================================== */
 
 .design-search-controls {
   display: flex;
@@ -947,10 +844,13 @@ footer {
 
 .design-search-controls input,
 .design-search-controls select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
   padding: 12px 14px;
   border: 1px solid #d8c6d0;
   border-radius: 8px;
-  background: white;
+  background: #ffffff;
   color: #53364a;
   font-size: 14px;
 }
@@ -963,7 +863,12 @@ footer {
   flex: 1 1 150px;
 }
 
+/* ==========================================
+   DOWNLOAD BUTTON
+========================================== */
+
 .download-button {
+  min-height: 44px;
   padding: 10px 16px;
   border: 1px solid #7c3aed;
   border-radius: 8px;
@@ -971,42 +876,41 @@ footer {
   color: #6d28d9;
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .download-button:hover {
   background: #ede9fe;
 }
 
-.download-button:focus-visible {
-  outline: 3px solid #a78bfa;
-  outline-offset: 2px;
+/* ==========================================
+   DELETE BUTTON
+========================================== */
+
+.delete-button,
+.delete-design-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #dc3545;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #dc3545;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
-/* Garment viewer controls */
-
-.garment-viewer-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.garment-viewer-actions button {
-  min-height: 42px;
-}
-
-.garment-viewer-actions button:focus-visible {
-  outline: 3px solid #a78bfa;
-  outline-offset: 2px;
+.delete-button:hover:not(:disabled),
+.delete-design-button:hover:not(:disabled) {
+  background: #dc3545;
+  color: #ffffff;
 }
 
 /* ==========================================
    SHARE DESIGN DIALOG
-   ========================================== */
+========================================== */
 
 .share-dialog-backdrop {
   position: fixed;
@@ -1015,6 +919,7 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
   padding: 20px;
   background: rgba(20, 15, 25, 0.65);
 }
@@ -1023,6 +928,7 @@ footer {
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   padding: 24px;
   border-radius: 16px;
@@ -1044,24 +950,26 @@ footer {
 }
 
 .share-dialog-close {
+  min-width: 44px;
+  min-height: 44px;
   border: none;
   background: transparent;
-  color: #555;
+  color: #555555;
   font-size: 28px;
-  cursor: pointer;
 }
 
 .share-dialog-text {
-  box-sizing: border-box;
+  display: block;
   width: 100%;
+  min-height: 140px;
   margin-top: 12px;
   padding: 12px;
   border: 1px solid #d8c6d0;
   border-radius: 8px;
   background: #faf8fb;
   color: #302435;
-  font: inherit;
   resize: vertical;
+  overflow-wrap: anywhere;
 }
 
 .share-dialog-actions {
@@ -1069,4 +977,299 @@ footer {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 18px;
+}
+
+.share-dialog-actions button {
+  min-height: 44px;
+}
+
+/* ==========================================
+   FOOTER
+========================================== */
+
+footer {
+  padding: 25px;
+  background: #251b27;
+  color: #ffffff;
+  text-align: center;
+}
+
+/* ==========================================
+   TABLET RESPONSIVENESS
+   Screens up to 850px
+========================================== */
+
+@media (max-width: 850px) {
+  .design-workspace {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .design-controls,
+  .design-preview {
+    padding: 24px;
+  }
+
+  .studio-page {
+    padding-inline: 24px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding-top: 60px;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-visual {
+    min-height: 320px;
+  }
+
+  .fashion-card {
+    width: min(85%, 460px);
+  }
+
+  .saved-designs {
+    padding-inline: 8px;
+  }
+}
+
+/* ==========================================
+   MOBILE RESPONSIVENESS
+   Screens up to 640px
+========================================== */
+
+@media (max-width: 640px) {
+  .app > header nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .app > header nav > div {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 18px;
+    width: 100%;
+  }
+
+  .navbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .navbar nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 18px;
+    width: 100%;
+  }
+
+  .app > header nav a,
+  .navbar nav a {
+    font-size: 14px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    min-height: auto;
+    padding: 60px 6%;
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 9vw, 42px);
+  }
+
+  .hero-visual {
+    min-height: 260px;
+    padding: 16px;
+  }
+
+  .fashion-card {
+    width: 100%;
+    padding: 28px 16px;
+  }
+
+  .fashion-card h2 {
+    font-size: clamp(24px, 7vw, 34px);
+  }
+
+  .features,
+  .workspace,
+  .about {
+    padding: 60px 6%;
+  }
+
+  .features h2,
+  .workspace h2,
+  .about h2 {
+    font-size: 28px;
+  }
+
+  .studio-page {
+    padding: 28px 14px 48px;
+  }
+
+  .studio-header {
+    margin-bottom: 32px;
+  }
+
+  .studio-header h1 {
+    font-size: clamp(28px, 8vw, 38px);
+  }
+
+  .design-workspace {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .design-controls,
+  .design-preview {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .design-controls h2 {
+    font-size: 24px;
+  }
+
+  .preview-canvas {
+    padding: 10px;
+  }
+
+  .garment-viewer {
+    height: clamp(240px, 70vw, 320px);
+    margin-bottom: 16px;
+  }
+
+  .design-controls .color-presets {
+    gap: 10px;
+  }
+
+  .design-controls .color-presets .color-swatch {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .design-details {
+    padding: 16px;
+  }
+
+  .design-detail-row {
+    flex-wrap: wrap;
+  }
+
+  .saved-designs {
+    margin: 28px auto;
+    padding: 12px 0;
+  }
+
+  .saved-designs-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .saved-design-card {
+    padding: 16px;
+  }
+
+  .saved-design-filters button {
+    flex: 1 1 130px;
+  }
+
+  .design-search-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .design-search-controls input,
+  .design-search-controls select,
+  .design-search-controls button {
+    width: 100%;
+  }
+
+  .saved-design-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .saved-design-actions button {
+    width: 100%;
+    padding-inline: 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .garment-viewer-actions {
+    gap: 10px;
+  }
+
+  .share-dialog-backdrop {
+    padding: 12px;
+  }
+
+  .share-dialog {
+    padding: 18px;
+    border-radius: 12px;
+  }
+
+  .share-dialog-header h3 {
+    font-size: 18px;
+  }
+
+  .share-dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .share-dialog-actions button {
+    width: 100%;
+  }
+}
+
+/* ==========================================
+   SMALL MOBILE SCREENS
+   Screens up to 360px
+========================================== */
+
+@media (max-width: 360px) {
+  .saved-design-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .garment-viewer-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .garment-viewer-actions button {
+    flex: none;
+    width: 100%;
+  }
+
+  .studio-page {
+    padding-inline: 10px;
+  }
+}
+
+/* ==========================================
+   ACCESSIBILITY — REDUCED MOTION
+========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .app *,
+  .app *::before,
+  .app *::after {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
+  }
 }

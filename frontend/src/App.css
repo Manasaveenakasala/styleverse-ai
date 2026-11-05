@@ -1273,3 +1273,433 @@ footer {
     animation-duration: 0.01ms;
   }
 }
+
+
+/* ==========================================
+   SPRINT 6 — PROFESSIONAL FASHION STUDIO
+========================================== */
+
+.studio-panel-heading {
+  margin-bottom: 28px;
+}
+
+.studio-panel-heading h2 {
+  margin: 12px 0;
+  font-size: clamp(26px, 3vw, 34px);
+  letter-spacing: -0.5px;
+}
+
+.studio-panel-heading p {
+  color: #746575;
+  line-height: 1.7;
+}
+
+/* FIELD GROUPS */
+
+.studio-field-group {
+  margin-bottom: 28px;
+}
+
+.studio-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.design-controls .studio-field-heading label {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.studio-field-step {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f9eaf2;
+  color: #a53d78;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* GARMENT OPTIONS */
+
+.garment-option-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.garment-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 90px;
+  padding: 12px 6px;
+  border: 1px solid #eadde5;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #493447;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.garment-option:hover {
+  border-color: #a53d78;
+  background: #fff7fb;
+  transform: translateY(-2px);
+}
+
+.garment-option.active {
+  border: 2px solid #a53d78;
+  background: #f9eaf2;
+  color: #862d60;
+}
+
+.garment-option-icon {
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+/* COLOR SECTION */
+
+.studio-color-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.studio-color-section .color-presets {
+  margin: 0;
+}
+
+.custom-color-control {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #eadde5;
+  border-radius: 12px;
+  background: #faf8fb;
+}
+
+.custom-color-control input[type="color"] {
+  flex-shrink: 0;
+  width: 56px;
+  height: 48px;
+}
+
+.custom-color-control > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.custom-color-label {
+  color: #746575;
+  font-size: 12px;
+}
+
+.custom-color-control strong {
+  color: #352334;
+  font-size: 14px;
+}
+
+/* FABRIC OPTIONS */
+
+.fabric-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fabric-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 14px;
+  border: 1px solid #eadde5;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: left;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.fabric-option strong {
+  color: #493447;
+  font-size: 14px;
+}
+
+.fabric-option span {
+  color: #827382;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fabric-option:hover {
+  border-color: #a53d78;
+  background: #fff7fb;
+}
+
+.fabric-option.active {
+  border: 2px solid #a53d78;
+  background: #f9eaf2;
+}
+
+/* DESCRIPTION */
+
+.studio-field-group textarea {
+  line-height: 1.6;
+}
+
+.description-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  color: #827382;
+  font-size: 12px;
+}
+
+/* AI FASHION ASSISTANT */
+
+.studio-ai-panel {
+  margin-top: 6px;
+  padding: 20px;
+  border: 1px solid #ead0e0;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    #fff6fb,
+    #f7edf8
+  );
+}
+
+.studio-ai-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.studio-ai-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #f2d9e8;
+  font-size: 22px;
+}
+
+.studio-ai-heading h3 {
+  margin: 0 0 6px;
+  color: #493447;
+  font-size: 17px;
+}
+
+.studio-ai-heading p {
+  margin: 0;
+  color: #746575;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.suggestion-button {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 1px solid #a53d78;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #a53d78;
+  font-weight: 700;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.suggestion-button:hover:not(:disabled) {
+  background: #a53d78;
+  color: #ffffff;
+}
+
+.suggestion-hint {
+  margin: 12px 0 0;
+  color: #827382;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ACTION BUTTONS */
+
+.studio-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.design-controls .studio-action-buttons .primary-button,
+.design-controls .studio-action-buttons .reset-button {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+}
+
+/* SUCCESS FEEDBACK */
+
+.suggestion-success {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #b8dfc7;
+  border-radius: 10px;
+  background: #edf9f1;
+  color: #247348;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* LIVE PREVIEW HEADER */
+
+.studio-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.studio-preview-header h2 {
+  margin: 10px 0 0;
+  color: #352334;
+  font-size: 28px;
+}
+
+.studio-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #cde8d7;
+  border-radius: 30px;
+  background: #effaf3;
+  color: #278354;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.studio-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #36a269;
+}
+
+/* PREVIEW SUMMARY */
+
+.preview-design-summary {
+  padding-top: 6px;
+}
+
+.preview-design-summary h3 {
+  margin: 8px 0;
+  color: #352334;
+  font-size: 26px;
+}
+
+.preview-design-summary p {
+  margin: 0 0 12px;
+  color: #746575;
+  font-size: 14px;
+}
+
+.preview-color-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #eadde5;
+  border-radius: 30px;
+  background: #ffffff;
+  color: #493447;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preview-description {
+  margin-top: 18px;
+  color: #746575;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* MOBILE */
+
+@media (max-width: 640px) {
+  .garment-option-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .garment-option {
+    min-height: 82px;
+    padding: 10px 4px;
+    font-size: 12px;
+  }
+
+  .garment-option-icon {
+    font-size: 24px;
+  }
+
+  .fabric-option-grid {
+    gap: 8px;
+  }
+
+  .fabric-option {
+    padding: 12px;
+  }
+
+  .studio-ai-panel {
+    padding: 16px;
+  }
+
+  .studio-preview-header h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 360px) {
+  .garment-option-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fabric-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .description-footer {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

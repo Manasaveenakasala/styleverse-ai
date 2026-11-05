@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react'
 import GarmentViewer from './GarmentViewer'
 import {
@@ -5,10 +6,6 @@ import {
   generateDesignSuggestion,
   type SavedDesign,
 } from '../services/api'
-
-// ==========================================
-// TYPES
-// ==========================================
 
 type GarmentType =
   | 'Dress'
@@ -36,23 +33,25 @@ type DesignWorkspaceProps = {
   selectionVersion: number
 }
 
-// ==========================================
-// OPTIONS
-// ==========================================
-
-const garmentOptions: GarmentType[] = [
-  'Dress',
-  'Jacket',
-  'Shirt',
-  'Skirt',
-  'Pants',
+const garmentOptions: {
+  name: GarmentType
+  icon: string
+}[] = [
+  { name: 'Dress', icon: '👗' },
+  { name: 'Jacket', icon: '🧥' },
+  { name: 'Shirt', icon: '👕' },
+  { name: 'Skirt', icon: '✨' },
+  { name: 'Pants', icon: '👖' },
 ]
 
-const fabricOptions: FabricType[] = [
-  'Cotton',
-  'Silk',
-  'Denim',
-  'Leather',
+const fabricOptions: {
+  name: FabricType
+  description: string
+}[] = [
+  { name: 'Cotton', description: 'Soft & breathable' },
+  { name: 'Silk', description: 'Smooth & elegant' },
+  { name: 'Denim', description: 'Casual & durable' },
+  { name: 'Leather', description: 'Bold & structured' },
 ]
 
 const colorPresets = [
@@ -63,72 +62,76 @@ const colorPresets = [
   { name: 'Green', value: '#42856a' },
 ]
 
-// ==========================================
-// DESIGN WORKSPACE COMPONENT
-// ==========================================
-
 export default function DesignWorkspace({
   onDesignSaved,
   selectedDesign,
   selectionVersion,
 }: DesignWorkspaceProps) {
-  // Form state
-  const [garment, setGarment] = useState<GarmentType>('Dress')
-  const [color, setColor] = useState('#a53d78')
-  const [fabric, setFabric] = useState<FabricType>('Cotton')
-  const [description, setDescription] = useState('')
+  const [garment, setGarment] =
+    useState<GarmentType>('Dress')
 
-  // Request state
-  const [isCreating, setIsCreating] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [color, setColor] =
+    useState('#a53d78')
 
-  // Feedback state
-  const [error, setError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
+  const [fabric, setFabric] =
+    useState<FabricType>('Cotton')
 
-  // Saved design summary
-  const [design, setDesign] = useState<CreatedDesign | null>(null)
+  const [description, setDescription] =
+    useState('')
 
-  // Ignore outdated requests after Reset
+  const [isCreating, setIsCreating] =
+    useState(false)
+
+  const [isGenerating, setIsGenerating] =
+    useState(false)
+
+  const [error, setError] =
+    useState('')
+
+  const [successMessage, setSuccessMessage] =
+    useState('')
+
+  const [design, setDesign] =
+    useState<CreatedDesign | null>(null)
+
   const requestVersion = useRef(0)
 
-  // Load a saved design whenever it is selected. selectionVersion also lets a
-  // user reload the same design after changing the form.
+  const isBusy = isCreating || isGenerating
+  const trimmedDescription = description.trim()
+
   useEffect(() => {
-    if (!selectedDesign) {
-      return
-    }
+    if (!selectedDesign) return
 
     requestVersion.current += 1
 
-    setGarment(selectedDesign.garment as GarmentType)
+    setGarment(
+      selectedDesign.garment as GarmentType
+    )
     setColor(selectedDesign.color)
-    setFabric(selectedDesign.fabric as FabricType)
+    setFabric(
+      selectedDesign.fabric as FabricType
+    )
     setDescription(selectedDesign.description)
 
     setDesign(null)
     setError('')
-    setSuccessMessage('Saved design loaded into the workspace.')
+    setSuccessMessage(
+      'Saved design loaded into your studio.'
+    )
     setIsCreating(false)
     setIsGenerating(false)
   }, [selectedDesign, selectionVersion])
 
-  // ========================================
-  // GENERATE FREE FASHION SUGGESTION
-  // ========================================
-
   async function handleGenerateSuggestion() {
-    const trimmedDescription = description.trim()
-
     if (
       trimmedDescription.length < 10 ||
-      isGenerating ||
-      isCreating
+      isBusy
     ) {
       return
     }
 
-    const currentRequest = ++requestVersion.current
+    const currentRequest =
+      ++requestVersion.current
 
     setIsGenerating(true)
     setError('')
@@ -136,26 +139,35 @@ export default function DesignWorkspace({
     setDesign(null)
 
     try {
-      const response = await generateDesignSuggestion(
-        trimmedDescription
-      )
+      const response =
+        await generateDesignSuggestion(
+          trimmedDescription
+        )
 
-      if (currentRequest !== requestVersion.current) {
+      if (
+        currentRequest !== requestVersion.current
+      ) {
         return
       }
 
       const suggestion = response.design
 
-      setGarment(suggestion.garment as GarmentType)
+      setGarment(
+        suggestion.garment as GarmentType
+      )
       setColor(suggestion.color)
-      setFabric(suggestion.fabric as FabricType)
+      setFabric(
+        suggestion.fabric as FabricType
+      )
       setDescription(suggestion.description)
 
       setSuccessMessage(
-        'Fashion suggestion generated! Review your design, then click Create Design to save it.'
+        'Your fashion suggestion is ready! Review the preview and save your design.'
       )
     } catch (err) {
-      if (currentRequest !== requestVersion.current) {
+      if (
+        currentRequest !== requestVersion.current
+      ) {
         return
       }
 
@@ -165,28 +177,21 @@ export default function DesignWorkspace({
           : 'Unable to generate a fashion suggestion.'
       )
     } finally {
-      if (currentRequest === requestVersion.current) {
+      if (
+        currentRequest === requestVersion.current
+      ) {
         setIsGenerating(false)
       }
     }
   }
 
-  // ========================================
-  // CREATE AND SAVE DESIGN
-  // ========================================
-
   async function handleCreateDesign() {
-    const trimmedDescription = description.trim()
-
-    if (
-      !trimmedDescription ||
-      isCreating ||
-      isGenerating
-    ) {
+    if (!trimmedDescription || isBusy) {
       return
     }
 
-    const currentRequest = ++requestVersion.current
+    const currentRequest =
+      ++requestVersion.current
 
     const newDesign: CreatedDesign = {
       garment,
@@ -201,25 +206,34 @@ export default function DesignWorkspace({
     setDesign(null)
 
     try {
-      const response = await createDesign(newDesign)
+      const response =
+        await createDesign(newDesign)
 
-      if (currentRequest !== requestVersion.current) {
+      if (
+        currentRequest !== requestVersion.current
+      ) {
         return
       }
 
       setDesign({
-        garment: response.design.garment as GarmentType,
+        garment:
+          response.design.garment as GarmentType,
         color: response.design.color,
-        fabric: response.design.fabric as FabricType,
-        description: response.design.description,
+        fabric:
+          response.design.fabric as FabricType,
+        description:
+          response.design.description,
       })
 
-      setSuccessMessage('Design saved successfully!')
+      setSuccessMessage(
+        'Your design has been saved successfully!'
+      )
 
-      // Refresh the saved designs section
       onDesignSaved()
     } catch (err) {
-      if (currentRequest !== requestVersion.current) {
+      if (
+        currentRequest !== requestVersion.current
+      ) {
         return
       }
 
@@ -229,15 +243,13 @@ export default function DesignWorkspace({
           : 'Unable to save design. Please try again.'
       )
     } finally {
-      if (currentRequest === requestVersion.current) {
+      if (
+        currentRequest === requestVersion.current
+      ) {
         setIsCreating(false)
       }
     }
   }
-
-  // ========================================
-  // RESET DESIGN
-  // ========================================
 
   function handleReset() {
     requestVersion.current += 1
@@ -250,182 +262,308 @@ export default function DesignWorkspace({
     setDesign(null)
     setError('')
     setSuccessMessage('')
-
     setIsCreating(false)
     setIsGenerating(false)
   }
 
-  // ========================================
-  // RENDER
-  // ========================================
+  function clearFeedback() {
+    setError('')
+    setSuccessMessage('')
+    setDesign(null)
+  }
 
   return (
     <div className="design-workspace">
-      {/* LEFT SIDE — DESIGN CONTROLS */}
+      {/* LEFT — DESIGN CONTROLS */}
 
-      <div className="design-controls">
-        <span className="eyebrow">
-          YOUR CREATIVE STUDIO
-        </span>
+      <section className="design-controls">
+        <div className="studio-panel-heading">
+          <span className="eyebrow">
+            STYLEVERSE DESIGN LAB
+          </span>
 
-        <h2>Design your outfit</h2>
+          <h2>Create your look</h2>
 
-        <p>
-          Choose a garment, customize its color and fabric,
-          and describe your fashion vision.
-        </p>
-
-        {/* GARMENT TYPE */}
-
-        <label htmlFor="garment">
-          Garment type
-        </label>
-
-        <select
-          id="garment"
-          value={garment}
-          onChange={(event) =>
-            setGarment(event.target.value as GarmentType)
-          }
-        >
-          {garmentOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-
-        {/* GARMENT COLOR */}
-
-        <label htmlFor="garment-color">
-          Garment color
-        </label>
-
-        <input
-          id="garment-color"
-          type="color"
-          value={color}
-          onChange={(event) =>
-            setColor(event.target.value)
-          }
-        />
-
-        {/* COLOR PRESETS */}
-
-        <div
-          className="color-presets"
-          role="group"
-          aria-label="Preset garment colors"
-        >
-          {colorPresets.map((preset) => {
-            const isSelected =
-              color.toLowerCase() === preset.value
-
-            return (
-              <button
-                key={preset.name}
-                type="button"
-                className={`color-swatch ${
-                  isSelected ? 'selected' : ''
-                }`}
-                style={{
-                  backgroundColor: preset.value,
-                }}
-                onClick={() => setColor(preset.value)}
-                aria-label={`Select ${preset.name} color`}
-                aria-pressed={isSelected}
-                title={preset.name}
-              />
-            )
-          })}
+          <p>
+            Bring your fashion ideas to life.
+            Customize every detail and watch
+            your creation appear in 3D.
+          </p>
         </div>
 
-        {/* FABRIC TYPE */}
+        {/* GARMENT SELECTION */}
 
-        <label htmlFor="fabric">
-          Fabric type
-        </label>
+        <div className="studio-field-group">
+          <div className="studio-field-heading">
+            <label id="garment-label">
+              Choose your garment
+            </label>
 
-        <select
-          id="fabric"
-          value={fabric}
-          onChange={(event) =>
-            setFabric(event.target.value as FabricType)
-          }
-        >
-          {fabricOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+            <span className="studio-field-step">
+              01
+            </span>
+          </div>
+
+          <div
+            className="garment-option-grid"
+            role="group"
+            aria-labelledby="garment-label"
+          >
+            {garmentOptions.map((option) => {
+              const selected =
+                garment === option.name
+
+              return (
+                <button
+                  key={option.name}
+                  type="button"
+                  className={`garment-option ${
+                    selected ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setGarment(option.name)
+                    clearFeedback()
+                  }}
+                  aria-pressed={selected}
+                >
+                  <span
+                    className="garment-option-icon"
+                    aria-hidden="true"
+                  >
+                    {option.icon}
+                  </span>
+
+                  <span>{option.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* COLOR SELECTION */}
+
+        <div className="studio-field-group">
+          <div className="studio-field-heading">
+            <label htmlFor="garment-color">
+              Choose your color
+            </label>
+
+            <span className="studio-field-step">
+              02
+            </span>
+          </div>
+
+          <div className="studio-color-section">
+            <div
+              className="color-presets"
+              role="group"
+              aria-label="Preset garment colors"
+            >
+              {colorPresets.map((preset) => {
+                const selected =
+                  color.toLowerCase() ===
+                  preset.value
+
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    className={`color-swatch ${
+                      selected ? 'selected' : ''
+                    }`}
+                    style={{
+                      backgroundColor:
+                        preset.value,
+                    }}
+                    onClick={() => {
+                      setColor(preset.value)
+                      clearFeedback()
+                    }}
+                    aria-label={`Select ${preset.name} color`}
+                    aria-pressed={selected}
+                    title={preset.name}
+                  />
+                )
+              })}
+            </div>
+
+            <div className="custom-color-control">
+              <input
+                id="garment-color"
+                type="color"
+                value={color}
+                onChange={(event) => {
+                  setColor(event.target.value)
+                  clearFeedback()
+                }}
+                aria-label="Custom garment color"
+              />
+
+              <div>
+                <span className="custom-color-label">
+                  Custom color
+                </span>
+
+                <strong>
+                  {color.toUpperCase()}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* FABRIC SELECTION */}
+
+        <div className="studio-field-group">
+          <div className="studio-field-heading">
+            <label id="fabric-label">
+              Select your fabric
+            </label>
+
+            <span className="studio-field-step">
+              03
+            </span>
+          </div>
+
+          <div
+            className="fabric-option-grid"
+            role="group"
+            aria-labelledby="fabric-label"
+          >
+            {fabricOptions.map((option) => {
+              const selected =
+                fabric === option.name
+
+              return (
+                <button
+                  key={option.name}
+                  type="button"
+                  className={`fabric-option ${
+                    selected ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setFabric(option.name)
+                    clearFeedback()
+                  }}
+                  aria-pressed={selected}
+                >
+                  <strong>
+                    {option.name}
+                  </strong>
+
+                  <span>
+                    {option.description}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* DESIGN DESCRIPTION */}
 
-        <label htmlFor="design-description">
-          Describe your design
-        </label>
+        <div className="studio-field-group">
+          <div className="studio-field-heading">
+            <label htmlFor="design-description">
+              Describe your vision
+            </label>
 
-        <textarea
-          id="design-description"
-          value={description}
-          onChange={(event) =>
-            setDescription(event.target.value)
-          }
-          placeholder="Example: Design an elegant blue silk dress for a wedding"
-          rows={5}
-        />
+            <span className="studio-field-step">
+              04
+            </span>
+          </div>
 
-        {/* FREE FASHION SUGGESTION BUTTON */}
+          <textarea
+            id="design-description"
+            value={description}
+            onChange={(event) => {
+              setDescription(event.target.value)
+              clearFeedback()
+            }}
+            placeholder="Example: Design an elegant blue silk evening dress for a wedding..."
+            rows={5}
+            maxLength={1000}
+          />
 
-        <button
-          type="button"
-          className="suggestion-button"
-          onClick={handleGenerateSuggestion}
-          disabled={
-            description.trim().length < 10 ||
-            isGenerating ||
-            isCreating
-          }
-        >
-          {isGenerating
-            ? 'Generating Suggestion...'
-            : '✨ Generate Design Suggestion'}
-        </button>
+          <div className="description-footer">
+            <span>
+              Add at least 10 characters
+              for AI suggestions.
+            </span>
 
-        <p className="suggestion-hint">
-          Free local fashion suggestions.
-          No API payment required.
-        </p>
+            <span>
+              {description.length}/1000
+            </span>
+          </div>
+        </div>
 
-        {/* CREATE DESIGN BUTTON */}
+        {/* AI SUGGESTION */}
 
-        <button
-          type="button"
-          className="primary-button"
-          onClick={handleCreateDesign}
-          disabled={
-            !description.trim() ||
-            isCreating ||
-            isGenerating
-          }
-        >
-          {isCreating
-            ? 'Creating Design...'
-            : 'Create Design'}
-        </button>
+        <div className="studio-ai-panel">
+          <div className="studio-ai-heading">
+            <span
+              className="studio-ai-icon"
+              aria-hidden="true"
+            >
+              ✨
+            </span>
 
-        {/* RESET BUTTON */}
+            <div>
+              <h3>AI Fashion Assistant</h3>
 
-        <button
-          type="button"
-          className="reset-button"
-          onClick={handleReset}
-        >
-          Reset Design
-        </button>
+              <p>
+                Turn your description into
+                a personalized design suggestion.
+              </p>
+            </div>
+          </div>
 
-        {/* ERROR MESSAGE */}
+          <button
+            type="button"
+            className="suggestion-button"
+            onClick={handleGenerateSuggestion}
+            disabled={
+              trimmedDescription.length < 10 ||
+              isBusy
+            }
+          >
+            {isGenerating
+              ? 'Generating your suggestion...'
+              : '✨ Generate Design Suggestion'}
+          </button>
+
+          <p className="suggestion-hint">
+            Free local fashion suggestions.
+            No paid API required.
+          </p>
+        </div>
+
+        {/* ACTION BUTTONS */}
+
+        <div className="studio-action-buttons">
+          <button
+            type="button"
+            className="primary-button"
+            onClick={handleCreateDesign}
+            disabled={
+              !trimmedDescription || isBusy
+            }
+          >
+            {isCreating
+              ? 'Saving your design...'
+              : 'Create & Save Design'}
+          </button>
+
+          <button
+            type="button"
+            className="reset-button"
+            onClick={handleReset}
+          >
+            Reset Design
+          </button>
+        </div>
+
+        {/* FEEDBACK */}
 
         {error && (
           <p
@@ -436,8 +574,6 @@ export default function DesignWorkspace({
           </p>
         )}
 
-        {/* SUCCESS MESSAGE */}
-
         {successMessage && (
           <p
             className="suggestion-success"
@@ -446,16 +582,28 @@ export default function DesignWorkspace({
             {successMessage}
           </p>
         )}
-      </div>
+      </section>
 
-      {/* RIGHT SIDE — 3D PREVIEW */}
+      {/* RIGHT — 3D PREVIEW */}
 
-      <div className="design-preview">
-        <span className="eyebrow">
-          DESIGN PREVIEW
-        </span>
+      <section className="design-preview">
+        <div className="studio-preview-header">
+          <div>
+            <span className="eyebrow">
+              LIVE DESIGN PREVIEW
+            </span>
 
-        {/* GARMENT VIEWER */}
+            <h2>Your creation</h2>
+          </div>
+
+          <span className="studio-live-badge">
+            <span
+              className="studio-live-dot"
+              aria-hidden="true"
+            />
+            Live 3D
+          </span>
+        </div>
 
         <div className="preview-canvas">
           <GarmentViewer
@@ -464,21 +612,29 @@ export default function DesignWorkspace({
             fabric={fabric}
           />
 
-          <h3>{garment}</h3>
+          <div className="preview-design-summary">
+            <h3>{garment}</h3>
 
-          <p>
-            <strong>Fabric:</strong> {fabric}
-          </p>
+            <p>
+              {fabric} Collection
+            </p>
 
-          <p>
-            <strong>Color:</strong>{' '}
-            {color.toUpperCase()}
-          </p>
+            <span className="preview-color-chip">
+              <span
+                className="design-color-indicator"
+                style={{
+                  backgroundColor: color,
+                }}
+                aria-hidden="true"
+              />
 
-          <p>
-            {description.trim()
-              ? description
-              : 'Your fashion concept will appear here.'}
+              {color.toUpperCase()}
+            </span>
+          </div>
+
+          <p className="preview-description">
+            {trimmedDescription ||
+              'Your fashion concept will appear here as you customize your design.'}
           </p>
         </div>
 
@@ -516,26 +672,31 @@ export default function DesignWorkspace({
           </div>
 
           <div className="design-detail-description">
-            <span>Design Description</span>
+            <span>
+              Design Description
+            </span>
 
             <p>
-              {description.trim() ||
+              {trimmedDescription ||
                 'Add a description to personalize your design.'}
             </p>
           </div>
         </div>
 
-        {/* SAVED DESIGN CONFIRMATION */}
+        {/* SAVE CONFIRMATION */}
 
         {design && (
           <div
             className="preview-note"
             role="status"
           >
-            <h3>Design Saved Successfully!</h3>
+            <h3>
+              Design Saved Successfully!
+            </h3>
 
             <p>
-              Your fashion design was saved to SQLite.
+              Your fashion design was
+              saved to SQLite.
             </p>
 
             <p>
@@ -559,7 +720,7 @@ export default function DesignWorkspace({
             </p>
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

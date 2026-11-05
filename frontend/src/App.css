@@ -1703,3 +1703,79 @@ footer {
     gap: 4px;
   }
 }
+
+
+/* ==========================================
+   SPRINT 6 — ADVANCED 3D VIEWER CONTROLS
+========================================== */
+
+.viewer-camera-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.viewer-control-button {
+  flex: 1 1 120px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #e4c8d8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #8d3065;
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.viewer-control-button:hover {
+  border-color: #a53d78;
+  background: #f9eaf2;
+}
+
+.viewer-control-button:focus-visible {
+  outline: 3px solid #a53d78;
+  outline-offset: 2px;
+}
+
+.viewer-help-text {
+  margin: 14px 0 6px;
+  color: #827382;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.viewer-distance-indicator {
+  display: block;
+  margin-top: 6px;
+  color: #827382;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .viewer-camera-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .viewer-control-button {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .viewer-camera-controls {
+    grid-template-columns: 1fr;
+  }
+}
+

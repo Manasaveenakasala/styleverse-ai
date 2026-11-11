@@ -4,6 +4,10 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
+// ==========================================
+// TYPES
+// ==========================================
+
 type GarmentType =
   | "Dress"
   | "Jacket"
@@ -17,16 +21,29 @@ type FabricType =
   | "Denim"
   | "Leather";
 
+export type GarmentSize =
+  | "XS"
+  | "S"
+  | "M"
+  | "L"
+  | "XL"
+  | "XXL";
+
 type GarmentViewerProps = {
   color: string;
   garment: GarmentType;
   fabric?: FabricType;
+  size?: GarmentSize;
 };
 
 type GarmentMaterialProps = {
   color: string;
   fabric?: FabricType;
 };
+
+// ==========================================
+// FABRIC MATERIALS
+// ==========================================
 
 const fabricMaterials = {
   Cotton: { roughness: 0.95, metalness: 0 },
@@ -35,13 +52,30 @@ const fabricMaterials = {
   Leather: { roughness: 0.35, metalness: 0.05 },
 };
 
+// ==========================================
+// GARMENT SIZE SCALING
+// ==========================================
+
+const garmentSizeScale: Record<GarmentSize, number> = {
+  XS: 0.8,
+  S: 0.9,
+  M: 1,
+  L: 1.1,
+  XL: 1.2,
+  XXL: 1.3,
+};
+
+// ==========================================
+// CAMERA CONFIGURATION
+// ==========================================
+
 const DEFAULT_CAMERA_DISTANCE = 7;
 const MIN_CAMERA_DISTANCE = 3;
 const MAX_CAMERA_DISTANCE = 8;
 const ZOOM_STEP = 0.8;
 
 // ==========================================
-// FABRIC MATERIAL
+// FABRIC MATERIAL COMPONENT
 // ==========================================
 
 function Fabric({
@@ -265,13 +299,14 @@ function CameraControls({
 }
 
 // ==========================================
-// MAIN 3D GARMENT VIEWER
+// MAIN GARMENT VIEWER
 // ==========================================
 
 export default function GarmentViewer({
   color,
   garment,
   fabric = "Cotton",
+  size = "M",
 }: GarmentViewerProps) {
   const [autoRotate, setAutoRotate] =
     useState(false);
@@ -437,7 +472,7 @@ export default function GarmentViewer({
       link.href = imageUrl;
 
       link.download =
-        `styleverse-${garment.toLowerCase()}.png`;
+        `styleverse-${garment.toLowerCase()}-${size.toLowerCase()}.png`;
 
       document.body.appendChild(link);
       link.click();
@@ -453,6 +488,10 @@ export default function GarmentViewer({
       );
     }
   }
+
+  // ========================================
+  // RENDER
+  // ========================================
 
   return (
     <div className="garment-viewer-container">
@@ -494,11 +533,15 @@ export default function GarmentViewer({
             intensity={0.7}
           />
 
-          <GarmentModel
-            garment={garment}
-            color={color}
-            fabric={fabric}
-          />
+          {/* SIZE-AWARE GARMENT MODEL */}
+
+          <group scale={garmentSizeScale[size]}>
+            <GarmentModel
+              garment={garment}
+              color={color}
+              fabric={fabric}
+            />
+          </group>
 
           <CameraControls
             controlsRef={controlsRef}
@@ -507,7 +550,7 @@ export default function GarmentViewer({
         </Canvas>
       </div>
 
-      {/* CAMERA ACTIONS */}
+      {/* CAMERA CONTROLS */}
 
       <div className="viewer-camera-controls">
         <button
@@ -540,7 +583,7 @@ export default function GarmentViewer({
         </button>
       </div>
 
-      {/* ROTATION & DOWNLOAD */}
+      {/* ROTATION AND DOWNLOAD */}
 
       <div className="garment-viewer-actions">
         <button
@@ -577,10 +620,16 @@ export default function GarmentViewer({
         </p>
       )}
 
-      <span className="viewer-distance-indicator">
-        Camera distance:{" "}
-        {cameraDistance.toFixed(1)}
-      </span>
+      <div className="viewer-distance-indicator">
+        <span>
+          Garment Size: <strong>{size}</strong>
+        </span>
+
+        <span>
+          {" "} • Camera distance:{" "}
+          {cameraDistance.toFixed(1)}
+        </span>
+      </div>
     </div>
   );
 }

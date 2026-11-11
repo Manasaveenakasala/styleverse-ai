@@ -1,6 +1,8 @@
 
 import { useEffect, useRef, useState } from 'react'
-import GarmentViewer from './GarmentViewer'
+import GarmentViewer, {
+  type GarmentSize,
+} from './GarmentViewer'
 import {
   createDesign,
   generateDesignSuggestion,
@@ -62,6 +64,15 @@ const colorPresets = [
   { name: 'Green', value: '#42856a' },
 ]
 
+const garmentSizes: GarmentSize[] = [
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  'XXL',
+]
+
 export default function DesignWorkspace({
   onDesignSaved,
   selectedDesign,
@@ -75,6 +86,9 @@ export default function DesignWorkspace({
 
   const [fabric, setFabric] =
     useState<FabricType>('Cotton')
+
+  const [size, setSize] =
+    useState<GarmentSize>('M')
 
   const [description, setDescription] =
     useState('')
@@ -99,6 +113,10 @@ export default function DesignWorkspace({
   const isBusy = isCreating || isGenerating
   const trimmedDescription = description.trim()
 
+  // ========================================
+  // LOAD SAVED DESIGN
+  // ========================================
+
   useEffect(() => {
     if (!selectedDesign) return
 
@@ -111,6 +129,10 @@ export default function DesignWorkspace({
     setFabric(
       selectedDesign.fabric as FabricType
     )
+
+    // Size is not yet stored in SQLite.
+    setSize('M')
+
     setDescription(selectedDesign.description)
 
     setDesign(null)
@@ -121,6 +143,10 @@ export default function DesignWorkspace({
     setIsCreating(false)
     setIsGenerating(false)
   }, [selectedDesign, selectionVersion])
+
+  // ========================================
+  // GENERATE AI SUGGESTION
+  // ========================================
 
   async function handleGenerateSuggestion() {
     if (
@@ -185,6 +211,10 @@ export default function DesignWorkspace({
     }
   }
 
+  // ========================================
+  // CREATE AND SAVE DESIGN
+  // ========================================
+
   async function handleCreateDesign() {
     if (!trimmedDescription || isBusy) {
       return
@@ -193,6 +223,7 @@ export default function DesignWorkspace({
     const currentRequest =
       ++requestVersion.current
 
+    // Existing API does not accept size yet.
     const newDesign: CreatedDesign = {
       garment,
       color,
@@ -226,7 +257,7 @@ export default function DesignWorkspace({
       })
 
       setSuccessMessage(
-        'Your design has been saved successfully!'
+        'Your design has been saved successfully! Garment size is currently preview-only.'
       )
 
       onDesignSaved()
@@ -251,12 +282,17 @@ export default function DesignWorkspace({
     }
   }
 
+  // ========================================
+  // RESET DESIGN
+  // ========================================
+
   function handleReset() {
     requestVersion.current += 1
 
     setGarment('Dress')
     setColor('#a53d78')
     setFabric('Cotton')
+    setSize('M')
     setDescription('')
 
     setDesign(null)
@@ -460,6 +496,53 @@ export default function DesignWorkspace({
           </div>
         </div>
 
+        {/* GARMENT SIZE SELECTION */}
+
+        <div className="studio-field-group">
+          <div className="studio-field-heading">
+            <label id="size-label">
+              Choose your size
+            </label>
+
+            <span className="studio-field-step">
+              04
+            </span>
+          </div>
+
+          <div
+            className="garment-size-grid"
+            role="group"
+            aria-labelledby="size-label"
+          >
+            {garmentSizes.map((option) => {
+              const selected = size === option
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={`garment-size-option ${
+                    selected ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setSize(option)
+                    clearFeedback()
+                  }}
+                  aria-pressed={selected}
+                  aria-label={`Size ${option}`}
+                >
+                  {option}
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="garment-size-hint">
+            Selected size: <strong>{size}</strong>.
+            The 3D preview updates instantly.
+          </p>
+        </div>
+
         {/* DESIGN DESCRIPTION */}
 
         <div className="studio-field-group">
@@ -469,7 +552,7 @@ export default function DesignWorkspace({
             </label>
 
             <span className="studio-field-step">
-              04
+              05
             </span>
           </div>
 
@@ -610,6 +693,7 @@ export default function DesignWorkspace({
             garment={garment}
             color={color}
             fabric={fabric}
+            size={size}
           />
 
           <div className="preview-design-summary">
@@ -630,6 +714,10 @@ export default function DesignWorkspace({
 
               {color.toUpperCase()}
             </span>
+
+            <p className="garment-preview-size">
+              Size: <strong>{size}</strong>
+            </p>
           </div>
 
           <p className="preview-description">
@@ -651,6 +739,11 @@ export default function DesignWorkspace({
           <div className="design-detail-row">
             <span>Fabric</span>
             <strong>{fabric}</strong>
+          </div>
+
+          <div className="design-detail-row">
+            <span>Size</span>
+            <strong>{size}</strong>
           </div>
 
           <div className="design-detail-row">
@@ -717,6 +810,11 @@ export default function DesignWorkspace({
             <p>
               <strong>Description:</strong>{' '}
               {design.description}
+            </p>
+
+            <p>
+              <strong>Size:</strong>{' '}
+              {size} (preview only)
             </p>
           </div>
         )}

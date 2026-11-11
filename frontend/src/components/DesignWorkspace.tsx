@@ -2,12 +2,18 @@
 import { useEffect, useRef, useState } from 'react'
 import GarmentViewer, {
   type GarmentSize,
+  type SleeveLength,
+  type GarmentFit,
 } from './GarmentViewer'
 import {
   createDesign,
   generateDesignSuggestion,
   type SavedDesign,
 } from '../services/api'
+
+// ==========================================
+// TYPES
+// ==========================================
 
 type GarmentType =
   | 'Dress'
@@ -35,6 +41,10 @@ type DesignWorkspaceProps = {
   selectionVersion: number
 }
 
+// ==========================================
+// GARMENT OPTIONS
+// ==========================================
+
 const garmentOptions: {
   name: GarmentType
   icon: string
@@ -46,15 +56,35 @@ const garmentOptions: {
   { name: 'Pants', icon: '👖' },
 ]
 
+// ==========================================
+// FABRIC OPTIONS
+// ==========================================
+
 const fabricOptions: {
   name: FabricType
   description: string
 }[] = [
-  { name: 'Cotton', description: 'Soft & breathable' },
-  { name: 'Silk', description: 'Smooth & elegant' },
-  { name: 'Denim', description: 'Casual & durable' },
-  { name: 'Leather', description: 'Bold & structured' },
+  {
+    name: 'Cotton',
+    description: 'Soft & breathable',
+  },
+  {
+    name: 'Silk',
+    description: 'Smooth & elegant',
+  },
+  {
+    name: 'Denim',
+    description: 'Casual & durable',
+  },
+  {
+    name: 'Leather',
+    description: 'Bold & structured',
+  },
 ]
+
+// ==========================================
+// COLOR PRESETS
+// ==========================================
 
 const colorPresets = [
   { name: 'Rose', value: '#a53d78' },
@@ -63,6 +93,10 @@ const colorPresets = [
   { name: 'Blue', value: '#4779c7' },
   { name: 'Green', value: '#42856a' },
 ]
+
+// ==========================================
+// CUSTOMIZATION OPTIONS
+// ==========================================
 
 const garmentSizes: GarmentSize[] = [
   'XS',
@@ -73,11 +107,33 @@ const garmentSizes: GarmentSize[] = [
   'XXL',
 ]
 
+const sleeveOptions: SleeveLength[] = [
+  'Sleeveless',
+  'Short',
+  'Three-Quarter',
+  'Long',
+]
+
+const fitOptions: GarmentFit[] = [
+  'Slim',
+  'Regular',
+  'Relaxed',
+  'Oversized',
+]
+
+// ==========================================
+// MAIN COMPONENT
+// ==========================================
+
 export default function DesignWorkspace({
   onDesignSaved,
   selectedDesign,
   selectionVersion,
 }: DesignWorkspaceProps) {
+  // ========================================
+  // DESIGN STATE
+  // ========================================
+
   const [garment, setGarment] =
     useState<GarmentType>('Dress')
 
@@ -89,6 +145,12 @@ export default function DesignWorkspace({
 
   const [size, setSize] =
     useState<GarmentSize>('M')
+
+  const [sleeveLength, setSleeveLength] =
+    useState<SleeveLength>('Short')
+
+  const [fit, setFit] =
+    useState<GarmentFit>('Regular')
 
   const [description, setDescription] =
     useState('')
@@ -113,36 +175,46 @@ export default function DesignWorkspace({
   const isBusy = isCreating || isGenerating
   const trimmedDescription = description.trim()
 
+  const hasSleeves =
+    garment === 'Dress' ||
+    garment === 'Shirt' ||
+    garment === 'Jacket'
+
   // ========================================
   // LOAD SAVED DESIGN
   // ========================================
 
   useEffect(() => {
-    if (!selectedDesign) return
+  if (!selectedDesign) return
 
-    requestVersion.current += 1
+  requestVersion.current += 1
 
-    setGarment(
-      selectedDesign.garment as GarmentType
-    )
+  // Schedule state updates after the effect finishes.
+  const timeoutId = window.setTimeout(() => {
+    setGarment(selectedDesign.garment as GarmentType)
     setColor(selectedDesign.color)
-    setFabric(
-      selectedDesign.fabric as FabricType
-    )
-
-    // Size is not yet stored in SQLite.
-    setSize('M')
-
+    setFabric(selectedDesign.fabric as FabricType)
     setDescription(selectedDesign.description)
+
+    // Advanced customizations are preview-only.
+    setSize('M')
+    setSleeveLength('Short')
+    setFit('Regular')
 
     setDesign(null)
     setError('')
     setSuccessMessage(
       'Saved design loaded into your studio.'
     )
+
     setIsCreating(false)
     setIsGenerating(false)
-  }, [selectedDesign, selectionVersion])
+  }, 0)
+
+  return () => {
+    window.clearTimeout(timeoutId)
+  }
+}, [selectedDesign, selectionVersion])
 
   // ========================================
   // GENERATE AI SUGGESTION
@@ -181,10 +253,13 @@ export default function DesignWorkspace({
       setGarment(
         suggestion.garment as GarmentType
       )
+
       setColor(suggestion.color)
+
       setFabric(
         suggestion.fabric as FabricType
       )
+
       setDescription(suggestion.description)
 
       setSuccessMessage(
@@ -223,7 +298,8 @@ export default function DesignWorkspace({
     const currentRequest =
       ++requestVersion.current
 
-    // Existing API does not accept size yet.
+    // Existing backend currently stores:
+    // garment, color, fabric, description.
     const newDesign: CreatedDesign = {
       garment,
       color,
@@ -257,7 +333,7 @@ export default function DesignWorkspace({
       })
 
       setSuccessMessage(
-        'Your design has been saved successfully! Garment size is currently preview-only.'
+        'Your design has been saved successfully! Advanced customizations are currently preview-only.'
       )
 
       onDesignSaved()
@@ -293,6 +369,8 @@ export default function DesignWorkspace({
     setColor('#a53d78')
     setFabric('Cotton')
     setSize('M')
+    setSleeveLength('Short')
+    setFit('Regular')
     setDescription('')
 
     setDesign(null)
@@ -302,11 +380,19 @@ export default function DesignWorkspace({
     setIsGenerating(false)
   }
 
+  // ========================================
+  // CLEAR FEEDBACK
+  // ========================================
+
   function clearFeedback() {
     setError('')
     setSuccessMessage('')
     setDesign(null)
   }
+
+  // ========================================
+  // RENDER
+  // ========================================
 
   return (
     <div className="design-workspace">
@@ -327,7 +413,9 @@ export default function DesignWorkspace({
           </p>
         </div>
 
-        {/* GARMENT SELECTION */}
+        {/* ==================================
+            01 — GARMENT SELECTION
+        ================================== */}
 
         <div className="studio-field-group">
           <div className="studio-field-heading">
@@ -376,7 +464,9 @@ export default function DesignWorkspace({
           </div>
         </div>
 
-        {/* COLOR SELECTION */}
+        {/* ==================================
+            02 — COLOR SELECTION
+        ================================== */}
 
         <div className="studio-field-group">
           <div className="studio-field-heading">
@@ -448,7 +538,9 @@ export default function DesignWorkspace({
           </div>
         </div>
 
-        {/* FABRIC SELECTION */}
+        {/* ==================================
+            03 — FABRIC SELECTION
+        ================================== */}
 
         <div className="studio-field-group">
           <div className="studio-field-heading">
@@ -496,7 +588,9 @@ export default function DesignWorkspace({
           </div>
         </div>
 
-        {/* GARMENT SIZE SELECTION */}
+        {/* ==================================
+            04 — GARMENT SIZE
+        ================================== */}
 
         <div className="studio-field-group">
           <div className="studio-field-heading">
@@ -538,12 +632,106 @@ export default function DesignWorkspace({
           </div>
 
           <p className="garment-size-hint">
-            Selected size: <strong>{size}</strong>.
+            Selected size:{' '}
+            <strong>{size}</strong>.
             The 3D preview updates instantly.
           </p>
         </div>
 
-        {/* DESIGN DESCRIPTION */}
+        {/* ==================================
+            05 — SLEEVE LENGTH
+        ================================== */}
+
+        {hasSleeves && (
+          <div className="studio-field-group">
+            <div className="studio-field-heading">
+              <label id="sleeve-length-label">
+                Sleeve length
+              </label>
+
+              <span className="studio-field-step">
+                05
+              </span>
+            </div>
+
+            <div
+              className="customization-option-grid"
+              role="group"
+              aria-labelledby="sleeve-length-label"
+            >
+              {sleeveOptions.map((option) => {
+                const selected =
+                  sleeveLength === option
+
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`customization-option ${
+                      selected ? 'active' : ''
+                    }`}
+                    onClick={() => {
+                      setSleeveLength(option)
+                      clearFeedback()
+                    }}
+                    aria-pressed={selected}
+                  >
+                    {option === 'Three-Quarter'
+                      ? '3/4 Sleeve'
+                      : option}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ==================================
+            06 — GARMENT FIT
+        ================================== */}
+
+        <div className="studio-field-group">
+          <div className="studio-field-heading">
+            <label id="garment-fit-label">
+              Garment fit
+            </label>
+
+            <span className="studio-field-step">
+              06
+            </span>
+          </div>
+
+          <div
+            className="customization-option-grid"
+            role="group"
+            aria-labelledby="garment-fit-label"
+          >
+            {fitOptions.map((option) => {
+              const selected = fit === option
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={`customization-option ${
+                    selected ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setFit(option)
+                    clearFeedback()
+                  }}
+                  aria-pressed={selected}
+                >
+                  {option}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ==================================
+            07 — DESIGN DESCRIPTION
+        ================================== */}
 
         <div className="studio-field-group">
           <div className="studio-field-heading">
@@ -552,7 +740,7 @@ export default function DesignWorkspace({
             </label>
 
             <span className="studio-field-step">
-              05
+              07
             </span>
           </div>
 
@@ -580,7 +768,9 @@ export default function DesignWorkspace({
           </div>
         </div>
 
-        {/* AI SUGGESTION */}
+        {/* ==================================
+            AI FASHION ASSISTANT
+        ================================== */}
 
         <div className="studio-ai-panel">
           <div className="studio-ai-heading">
@@ -621,7 +811,9 @@ export default function DesignWorkspace({
           </p>
         </div>
 
-        {/* ACTION BUTTONS */}
+        {/* ==================================
+            ACTION BUTTONS
+        ================================== */}
 
         <div className="studio-action-buttons">
           <button
@@ -667,7 +859,9 @@ export default function DesignWorkspace({
         )}
       </section>
 
-      {/* RIGHT — 3D PREVIEW */}
+      {/* =====================================
+          RIGHT — LIVE 3D PREVIEW
+      ===================================== */}
 
       <section className="design-preview">
         <div className="studio-preview-header">
@@ -684,6 +878,7 @@ export default function DesignWorkspace({
               className="studio-live-dot"
               aria-hidden="true"
             />
+
             Live 3D
           </span>
         </div>
@@ -694,6 +889,8 @@ export default function DesignWorkspace({
             color={color}
             fabric={fabric}
             size={size}
+            sleeveLength={sleeveLength}
+            fit={fit}
           />
 
           <div className="preview-design-summary">
@@ -718,6 +915,17 @@ export default function DesignWorkspace({
             <p className="garment-preview-size">
               Size: <strong>{size}</strong>
             </p>
+
+            <p className="garment-preview-size">
+              Fit: <strong>{fit}</strong>
+            </p>
+
+            {hasSleeves && (
+              <p className="garment-preview-size">
+                Sleeves:{' '}
+                <strong>{sleeveLength}</strong>
+              </p>
+            )}
           </div>
 
           <p className="preview-description">
@@ -726,7 +934,9 @@ export default function DesignWorkspace({
           </p>
         </div>
 
-        {/* DESIGN DETAILS */}
+        {/* ==================================
+            DESIGN DETAILS
+        ================================== */}
 
         <div className="design-details">
           <h3>Design Details</h3>
@@ -745,6 +955,18 @@ export default function DesignWorkspace({
             <span>Size</span>
             <strong>{size}</strong>
           </div>
+
+          <div className="design-detail-row">
+            <span>Fit</span>
+            <strong>{fit}</strong>
+          </div>
+
+          {hasSleeves && (
+            <div className="design-detail-row">
+              <span>Sleeve Length</span>
+              <strong>{sleeveLength}</strong>
+            </div>
+          )}
 
           <div className="design-detail-row">
             <span>Color</span>
@@ -776,7 +998,9 @@ export default function DesignWorkspace({
           </div>
         </div>
 
-        {/* SAVE CONFIRMATION */}
+        {/* ==================================
+            SAVE CONFIRMATION
+        ================================== */}
 
         {design && (
           <div
@@ -816,6 +1040,18 @@ export default function DesignWorkspace({
               <strong>Size:</strong>{' '}
               {size} (preview only)
             </p>
+
+            <p>
+              <strong>Fit:</strong>{' '}
+              {fit} (preview only)
+            </p>
+
+            {hasSleeves && (
+              <p>
+                <strong>Sleeves:</strong>{' '}
+                {sleeveLength} (preview only)
+              </p>
+            )}
           </div>
         )}
       </section>

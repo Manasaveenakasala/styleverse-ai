@@ -1,60 +1,63 @@
 
-import { useRef, useState } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-
-// ==========================================
-// TYPES
-// ==========================================
+import { useRef, useState } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 
 type GarmentType =
-  | "Dress"
-  | "Jacket"
-  | "Shirt"
-  | "Skirt"
-  | "Pants";
+  | 'Dress'
+  | 'Jacket'
+  | 'Shirt'
+  | 'Skirt'
+  | 'Pants'
 
 type FabricType =
-  | "Cotton"
-  | "Silk"
-  | "Denim"
-  | "Leather";
+  | 'Cotton'
+  | 'Silk'
+  | 'Denim'
+  | 'Leather'
 
 export type GarmentSize =
-  | "XS"
-  | "S"
-  | "M"
-  | "L"
-  | "XL"
-  | "XXL";
+  | 'XS'
+  | 'S'
+  | 'M'
+  | 'L'
+  | 'XL'
+  | 'XXL'
+
+export type SleeveLength =
+  | 'Sleeveless'
+  | 'Short'
+  | 'Three-Quarter'
+  | 'Long'
+
+export type GarmentFit =
+  | 'Slim'
+  | 'Regular'
+  | 'Relaxed'
+  | 'Oversized'
 
 type GarmentViewerProps = {
-  color: string;
-  garment: GarmentType;
-  fabric?: FabricType;
-  size?: GarmentSize;
-};
+  garment: GarmentType
+  color: string
+  fabric?: FabricType
+  size?: GarmentSize
+  sleeveLength?: SleeveLength
+  fit?: GarmentFit
+}
 
-type GarmentMaterialProps = {
-  color: string;
-  fabric?: FabricType;
-};
-
-// ==========================================
-// FABRIC MATERIALS
-// ==========================================
+type ModelProps = {
+  color: string
+  fabric: FabricType
+  sleeveLength: SleeveLength
+}
 
 const fabricMaterials = {
   Cotton: { roughness: 0.95, metalness: 0 },
   Silk: { roughness: 0.2, metalness: 0.1 },
   Denim: { roughness: 1, metalness: 0 },
   Leather: { roughness: 0.35, metalness: 0.05 },
-};
-
-// ==========================================
-// GARMENT SIZE SCALING
-// ==========================================
+}
 
 const garmentSizeScale: Record<GarmentSize, number> = {
   XS: 0.8,
@@ -63,26 +66,28 @@ const garmentSizeScale: Record<GarmentSize, number> = {
   L: 1.1,
   XL: 1.2,
   XXL: 1.3,
-};
+}
 
-// ==========================================
-// CAMERA CONFIGURATION
-// ==========================================
+const fitScale: Record<GarmentFit, number> = {
+  Slim: 0.85,
+  Regular: 1,
+  Relaxed: 1.12,
+  Oversized: 1.25,
+}
 
-const DEFAULT_CAMERA_DISTANCE = 7;
-const MIN_CAMERA_DISTANCE = 3;
-const MAX_CAMERA_DISTANCE = 8;
-const ZOOM_STEP = 0.8;
-
-// ==========================================
-// FABRIC MATERIAL COMPONENT
-// ==========================================
+const DEFAULT_CAMERA_DISTANCE = 7
+const MIN_CAMERA_DISTANCE = 3
+const MAX_CAMERA_DISTANCE = 8
+const ZOOM_STEP = 0.8
 
 function Fabric({
   color,
-  fabric = "Cotton",
-}: GarmentMaterialProps) {
-  const material = fabricMaterials[fabric];
+  fabric,
+}: {
+  color: string
+  fabric: FabricType
+}) {
+  const material = fabricMaterials[fabric]
 
   return (
     <meshStandardMaterial
@@ -90,17 +95,60 @@ function Fabric({
       roughness={material.roughness}
       metalness={material.metalness}
     />
-  );
+  )
 }
 
 // ==========================================
-// SHIRT MODEL
+// REUSABLE SLEEVES
 // ==========================================
 
-function Shirt({
+function Sleeves({
   color,
   fabric,
-}: GarmentMaterialProps) {
+  sleeveLength,
+}: ModelProps) {
+  if (sleeveLength === 'Sleeveless') {
+    return null
+  }
+
+  const lengths: Record<
+    Exclude<SleeveLength, 'Sleeveless'>,
+    number
+  > = {
+    Short: 0.6,
+    'Three-Quarter': 1.15,
+    Long: 1.55,
+  }
+
+  const length = lengths[sleeveLength]
+
+  return (
+    <group>
+      {([-1, 1] as const).map((side) => (
+        <mesh
+          key={side}
+          position={[
+            side * (0.75 + length * 0.34),
+            0.55 - length * 0.2,
+            0,
+          ]}
+          rotation={[0, 0, side * 0.4]}
+        >
+          <boxGeometry args={[length, 0.55, 0.4]} />
+          <Fabric color={color} fabric={fabric} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+// ==========================================
+// GARMENT MODELS
+// ==========================================
+
+function Shirt(props: ModelProps) {
+  const { color, fabric, sleeveLength } = props
+
   return (
     <group>
       <mesh>
@@ -108,33 +156,18 @@ function Shirt({
         <Fabric color={color} fabric={fabric} />
       </mesh>
 
-      <mesh
-        position={[-1.05, 0.55, 0]}
-        rotation={[0, 0, -0.4]}
-      >
-        <boxGeometry args={[0.75, 0.6, 0.4]} />
-        <Fabric color={color} fabric={fabric} />
-      </mesh>
-
-      <mesh
-        position={[1.05, 0.55, 0]}
-        rotation={[0, 0, 0.4]}
-      >
-        <boxGeometry args={[0.75, 0.6, 0.4]} />
-        <Fabric color={color} fabric={fabric} />
-      </mesh>
+      <Sleeves
+        color={color}
+        fabric={fabric}
+        sleeveLength={sleeveLength}
+      />
     </group>
-  );
+  )
 }
 
-// ==========================================
-// DRESS MODEL
-// ==========================================
+function Dress(props: ModelProps) {
+  const { color, fabric, sleeveLength } = props
 
-function Dress({
-  color,
-  fabric,
-}: GarmentMaterialProps) {
   return (
     <group>
       <mesh position={[0, 0.7, 0]}>
@@ -150,61 +183,52 @@ function Dress({
         />
         <Fabric color={color} fabric={fabric} />
       </mesh>
+
+      <group position={[0, 0.65, 0]}>
+        <Sleeves
+          color={color}
+          fabric={fabric}
+          sleeveLength={sleeveLength}
+        />
+      </group>
     </group>
-  );
+  )
 }
 
-// ==========================================
-// JACKET MODEL
-// ==========================================
+function Jacket(props: ModelProps) {
+  const { color, fabric } = props
 
-function Jacket({
-  color,
-  fabric,
-}: GarmentMaterialProps) {
   return (
     <group>
-      <Shirt color={color} fabric={fabric} />
+      <Shirt {...props} />
 
       <mesh position={[0, 0, 0.22]}>
         <boxGeometry args={[0.06, 1.8, 0.05]} />
-
         <meshStandardMaterial
           color="#ffffff"
           metalness={0.4}
           roughness={0.3}
         />
       </mesh>
+
+      <mesh position={[0, 0.8, 0.2]}>
+        <boxGeometry args={[0.7, 0.15, 0.12]} />
+        <Fabric color={color} fabric={fabric} />
+      </mesh>
     </group>
-  );
+  )
 }
 
-// ==========================================
-// SKIRT MODEL
-// ==========================================
-
-function Skirt({
-  color,
-  fabric,
-}: GarmentMaterialProps) {
+function Skirt({ color, fabric }: ModelProps) {
   return (
     <mesh position={[0, -0.3, 0]}>
-      <cylinderGeometry
-        args={[0.55, 1.3, 1.8, 32]}
-      />
+      <cylinderGeometry args={[0.55, 1.3, 1.8, 32]} />
       <Fabric color={color} fabric={fabric} />
     </mesh>
-  );
+  )
 }
 
-// ==========================================
-// PANTS MODEL
-// ==========================================
-
-function Pants({
-  color,
-  fabric,
-}: GarmentMaterialProps) {
+function Pants({ color, fabric }: ModelProps) {
   return (
     <group>
       <mesh position={[0, 0.65, 0]}>
@@ -222,44 +246,33 @@ function Pants({
         <Fabric color={color} fabric={fabric} />
       </mesh>
     </group>
-  );
+  )
 }
-
-// ==========================================
-// GARMENT MODEL SELECTOR
-// ==========================================
 
 function GarmentModel({
   garment,
   color,
-  fabric,
+  fabric = 'Cotton',
+  sleeveLength = 'Short',
 }: GarmentViewerProps) {
+  const props: ModelProps = {
+    color,
+    fabric,
+    sleeveLength,
+  }
+
   switch (garment) {
-    case "Dress":
-      return (
-        <Dress color={color} fabric={fabric} />
-      );
-
-    case "Jacket":
-      return (
-        <Jacket color={color} fabric={fabric} />
-      );
-
-    case "Skirt":
-      return (
-        <Skirt color={color} fabric={fabric} />
-      );
-
-    case "Pants":
-      return (
-        <Pants color={color} fabric={fabric} />
-      );
-
-    case "Shirt":
+    case 'Dress':
+      return <Dress {...props} />
+    case 'Jacket':
+      return <Jacket {...props} />
+    case 'Skirt':
+      return <Skirt {...props} />
+    case 'Pants':
+      return <Pants {...props} />
+    case 'Shirt':
     default:
-      return (
-        <Shirt color={color} fabric={fabric} />
-      );
+      return <Shirt {...props} />
   }
 }
 
@@ -268,15 +281,17 @@ function GarmentModel({
 // ==========================================
 
 type CameraControlsProps = {
-  controlsRef: React.RefObject<OrbitControlsImpl | null>;
-  autoRotate: boolean;
-};
+  controlsRef: React.RefObject<OrbitControlsImpl | null>
+  autoRotate: boolean
+  onDistanceChange: (distance: number) => void
+}
 
 function CameraControls({
   controlsRef,
   autoRotate,
+  onDistanceChange,
 }: CameraControlsProps) {
-  const { camera } = useThree();
+  const { camera } = useThree()
 
   return (
     <OrbitControls
@@ -291,223 +306,125 @@ function CameraControls({
       maxDistance={MAX_CAMERA_DISTANCE}
       autoRotate={autoRotate}
       autoRotateSpeed={1.5}
-      onChange={() => {
-        camera.updateProjectionMatrix();
+      onEnd={() => {
+        const controls = controlsRef.current
+        if (controls) {
+          onDistanceChange(
+            camera.position.distanceTo(controls.target)
+          )
+        }
       }}
     />
-  );
+  )
 }
 
 // ==========================================
-// MAIN GARMENT VIEWER
+// MAIN VIEWER
 // ==========================================
 
 export default function GarmentViewer({
-  color,
   garment,
-  fabric = "Cotton",
-  size = "M",
+  color,
+  fabric = 'Cotton',
+  size = 'M',
+  sleeveLength = 'Short',
+  fit = 'Regular',
 }: GarmentViewerProps) {
-  const [autoRotate, setAutoRotate] =
-    useState(false);
+  const [autoRotate, setAutoRotate] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+  const [cameraDistance, setCameraDistance] = useState(
+    DEFAULT_CAMERA_DISTANCE
+  )
 
-  const [downloadError, setDownloadError] =
-    useState("");
+  const viewerRef = useRef<HTMLDivElement>(null)
+  const controlsRef = useRef<OrbitControlsImpl | null>(null)
 
-  const [cameraDistance, setCameraDistance] =
-    useState(DEFAULT_CAMERA_DISTANCE);
+  function changeZoom(amount: number) {
+    const controls = controlsRef.current
+    if (!controls) return
 
-  const viewerRef =
-    useRef<HTMLDivElement>(null);
+    const camera = controls.object
+    const direction = camera.position
+      .clone()
+      .sub(controls.target)
 
-  const controlsRef =
-    useRef<OrbitControlsImpl | null>(null);
-
-  // ========================================
-  // AUTO ROTATION
-  // ========================================
-
-  function toggleRotation() {
-    setAutoRotate((previous) => !previous);
-  }
-
-  // ========================================
-  // ZOOM IN
-  // ========================================
-
-  function handleZoomIn() {
-    const controls = controlsRef.current;
-
-    if (!controls) return;
-
-    const camera = controls.object;
-
-    const currentDistance =
-      camera.position.distanceTo(
-        controls.target
-      );
-
-    const newDistance = Math.max(
+    const currentDistance = direction.length()
+    const nextDistance = Math.max(
       MIN_CAMERA_DISTANCE,
-      currentDistance - ZOOM_STEP
-    );
+      Math.min(
+        MAX_CAMERA_DISTANCE,
+        currentDistance + amount
+      )
+    )
 
-    const direction = camera.position
-      .clone()
-      .sub(controls.target)
-      .normalize();
-
-    camera.position.copy(
-      controls.target
-        .clone()
-        .add(
-          direction.multiplyScalar(newDistance)
-        )
-    );
-
-    controls.update();
-    setCameraDistance(newDistance);
-  }
-
-  // ========================================
-  // ZOOM OUT
-  // ========================================
-
-  function handleZoomOut() {
-    const controls = controlsRef.current;
-
-    if (!controls) return;
-
-    const camera = controls.object;
-
-    const currentDistance =
-      camera.position.distanceTo(
-        controls.target
-      );
-
-    const newDistance = Math.min(
-      MAX_CAMERA_DISTANCE,
-      currentDistance + ZOOM_STEP
-    );
-
-    const direction = camera.position
-      .clone()
-      .sub(controls.target)
-      .normalize();
+    direction.normalize().multiplyScalar(nextDistance)
 
     camera.position.copy(
-      controls.target
-        .clone()
-        .add(
-          direction.multiplyScalar(newDistance)
-        )
-    );
+      controls.target.clone().add(direction)
+    )
 
-    controls.update();
-    setCameraDistance(newDistance);
+    controls.update()
+    setCameraDistance(nextDistance)
   }
-
-  // ========================================
-  // RESET CAMERA
-  // ========================================
 
   function handleResetCamera() {
-    const controls = controlsRef.current;
+    const controls = controlsRef.current
+    if (!controls) return
 
-    if (!controls) return;
-
-    setAutoRotate(false);
-
-    controls.reset();
-
+    setAutoRotate(false)
+    controls.reset()
     controls.object.position.set(
       0,
       0,
       DEFAULT_CAMERA_DISTANCE
-    );
-
-    controls.target.set(0, 0, 0);
-    controls.update();
-
-    setCameraDistance(
-      DEFAULT_CAMERA_DISTANCE
-    );
+    )
+    controls.target.set(0, 0, 0)
+    controls.update()
+    setCameraDistance(DEFAULT_CAMERA_DISTANCE)
   }
 
-  // ========================================
-  // DOWNLOAD PNG
-  // ========================================
-
   function handleDownloadPNG() {
-    setDownloadError("");
+    setDownloadError('')
 
     try {
       const canvas =
-        viewerRef.current?.querySelector(
-          "canvas"
-        );
+        viewerRef.current?.querySelector('canvas')
 
       if (!canvas) {
-        throw new Error(
-          "3D canvas not found."
-        );
+        throw new Error('3D canvas not found.')
       }
 
-      const imageUrl =
-        canvas.toDataURL("image/png");
+      const imageUrl = canvas.toDataURL('image/png')
 
-      if (
-        !imageUrl.startsWith(
-          "data:image/png"
-        )
-      ) {
-        throw new Error(
-          "Could not generate PNG image."
-        );
+      if (!imageUrl.startsWith('data:image/png')) {
+        throw new Error('Could not generate PNG image.')
       }
 
-      const link =
-        document.createElement("a");
-
-      link.href = imageUrl;
-
+      const link = document.createElement('a')
+      link.href = imageUrl
       link.download =
-        `styleverse-${garment.toLowerCase()}-${size.toLowerCase()}.png`;
+        `styleverse-${garment.toLowerCase()}-${size.toLowerCase()}-${fit.toLowerCase()}.png`
 
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
     } catch (error) {
-      console.error(
-        "PNG download failed:",
-        error
-      );
-
+      console.error('PNG download failed:', error)
       setDownloadError(
-        "Unable to download the 3D preview. Please try again."
-      );
+        'Unable to download the 3D preview. Please try again.'
+      )
     }
   }
 
-  // ========================================
-  // RENDER
-  // ========================================
+  const sizeScale = garmentSizeScale[size]
+  const widthScale = fitScale[fit]
 
   return (
     <div className="garment-viewer-container">
-      {/* 3D CANVAS */}
-
-      <div
-        className="garment-viewer"
-        ref={viewerRef}
-      >
+      <div className="garment-viewer" ref={viewerRef}>
         <Canvas
           camera={{
-            position: [
-              0,
-              0,
-              DEFAULT_CAMERA_DISTANCE,
-            ],
+            position: [0, 0, DEFAULT_CAMERA_DISTANCE],
             fov: 45,
           }}
           gl={{
@@ -518,7 +435,7 @@ export default function GarmentViewer({
         >
           <color
             attach="background"
-            args={["#ffffff"]}
+            args={['#ffffff']}
           />
 
           <ambientLight intensity={1.5} />
@@ -533,32 +450,32 @@ export default function GarmentViewer({
             intensity={0.7}
           />
 
-          {/* SIZE-AWARE GARMENT MODEL */}
-
-          <group scale={garmentSizeScale[size]}>
-            <GarmentModel
-              garment={garment}
-              color={color}
-              fabric={fabric}
-            />
+          {/* Size changes overall scale.
+              Fit changes width and depth. */}
+          <group scale={sizeScale}>
+            <group scale={[widthScale, 1, widthScale]}>
+              <GarmentModel
+                garment={garment}
+                color={color}
+                fabric={fabric}
+                sleeveLength={sleeveLength}
+              />
+            </group>
           </group>
 
           <CameraControls
             controlsRef={controlsRef}
             autoRotate={autoRotate}
+            onDistanceChange={setCameraDistance}
           />
         </Canvas>
       </div>
-
-      {/* CAMERA CONTROLS */}
 
       <div className="viewer-camera-controls">
         <button
           type="button"
           className="viewer-control-button"
-          onClick={handleZoomIn}
-          aria-label="Zoom in"
-          title="Zoom in"
+          onClick={() => changeZoom(-ZOOM_STEP)}
         >
           + Zoom In
         </button>
@@ -566,9 +483,7 @@ export default function GarmentViewer({
         <button
           type="button"
           className="viewer-control-button"
-          onClick={handleZoomOut}
-          aria-label="Zoom out"
-          title="Zoom out"
+          onClick={() => changeZoom(ZOOM_STEP)}
         >
           − Zoom Out
         </button>
@@ -577,24 +492,21 @@ export default function GarmentViewer({
           type="button"
           className="viewer-control-button"
           onClick={handleResetCamera}
-          title="Reset camera"
         >
           ↺ Reset Camera
         </button>
       </div>
 
-      {/* ROTATION AND DOWNLOAD */}
-
       <div className="garment-viewer-actions">
         <button
           type="button"
           className="rotation-button"
-          onClick={toggleRotation}
+          onClick={() => setAutoRotate((value) => !value)}
           aria-pressed={autoRotate}
         >
           {autoRotate
-            ? "⏸ Stop Rotation"
-            : "▶ Auto Rotate"}
+            ? '⏸ Stop Rotation'
+            : '▶ Auto Rotate'}
         </button>
 
         <button
@@ -612,24 +524,24 @@ export default function GarmentViewer({
       </p>
 
       {downloadError && (
-        <p
-          className="design-error"
-          role="alert"
-        >
+        <p className="design-error" role="alert">
           {downloadError}
         </p>
       )}
 
       <div className="viewer-distance-indicator">
         <span>
-          Garment Size: <strong>{size}</strong>
+          Size: <strong>{size}</strong>
         </span>
-
+        {' • '}
         <span>
-          {" "} • Camera distance:{" "}
-          {cameraDistance.toFixed(1)}
+          Fit: <strong>{fit}</strong>
+        </span>
+        {' • '}
+        <span>
+          Camera distance: {cameraDistance.toFixed(1)}
         </span>
       </div>
     </div>
-  );
+  )
 }

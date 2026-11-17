@@ -2005,4 +2005,49 @@ footer {
 }
 
 
+/* Sprint 7 — Sleeve Length and Garment Fit */
+
+.customization-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.customization-option {
+  padding: 13px 12px;
+  border: 1px solid #d9d3dd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #33303a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.customization-option:hover {
+  border-color: #a53d78;
+  background: #fcf3f8;
+}
+
+.customization-option.active {
+  background: #a53d78;
+  border-color: #a53d78;
+  color: #ffffff;
+}
+
+.customization-option:focus-visible {
+  outline: 3px solid #a53d78;
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .customization-option-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+  
+
 

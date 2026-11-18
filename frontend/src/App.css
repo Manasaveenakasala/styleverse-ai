@@ -2048,6 +2048,63 @@ footer {
     gap: 8px;
   }
 }
+
+
+/* ==========================================
+   SPRINT 7 — TASK 4: CAMERA VIEWS
+   ========================================== */
+
+.camera-view-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.camera-view-button {
+  min-width: 0;
+  padding: 11px 6px;
+  border: 1px solid #e3cad8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #713052;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.camera-view-button:hover {
+  background: #fcf3f8;
+  border-color: #a53d78;
+}
+
+.camera-view-button.active {
+  background: #a53d78;
+  border-color: #a53d78;
+  color: #ffffff;
+}
+
+.camera-view-button:focus-visible {
+  outline: 3px solid #a53d78;
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .camera-view-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .camera-view-button {
+    transition: none;
+  }
+}
+
   
 
 

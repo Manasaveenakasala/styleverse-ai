@@ -33,6 +33,9 @@ type CreatedDesign = {
   color: string
   fabric: FabricType
   description: string
+  size: GarmentSize
+  sleeve_length: SleeveLength
+  fit: GarmentFit
 }
 
 type DesignWorkspaceProps = {
@@ -185,36 +188,50 @@ export default function DesignWorkspace({
   // ========================================
 
   useEffect(() => {
-  if (!selectedDesign) return
+    if (!selectedDesign) return
 
-  requestVersion.current += 1
+    requestVersion.current += 1
 
-  // Schedule state updates after the effect finishes.
-  const timeoutId = window.setTimeout(() => {
-    setGarment(selectedDesign.garment as GarmentType)
-    setColor(selectedDesign.color)
-    setFabric(selectedDesign.fabric as FabricType)
-    setDescription(selectedDesign.description)
+    // Schedule updates after the effect to avoid
+    // react-hooks/set-state-in-effect lint errors.
+    const timeoutId = window.setTimeout(() => {
+      setGarment(
+        selectedDesign.garment as GarmentType
+      )
 
-    // Advanced customizations are preview-only.
-    setSize('M')
-    setSleeveLength('Short')
-    setFit('Regular')
+      setColor(selectedDesign.color)
 
-    setDesign(null)
-    setError('')
-    setSuccessMessage(
-      'Saved design loaded into your studio.'
-    )
+      setFabric(
+        selectedDesign.fabric as FabricType
+      )
 
-    setIsCreating(false)
-    setIsGenerating(false)
-  }, 0)
+      setDescription(selectedDesign.description)
 
-  return () => {
-    window.clearTimeout(timeoutId)
-  }
-}, [selectedDesign, selectionVersion])
+      // Restore saved advanced customizations.
+      // Fallbacks support older saved designs.
+      setSize(selectedDesign.size ?? 'M')
+
+      setSleeveLength(
+        selectedDesign.sleeve_length ?? 'Short'
+      )
+
+      setFit(selectedDesign.fit ?? 'Regular')
+
+      setDesign(null)
+      setError('')
+
+      setSuccessMessage(
+        'Saved design loaded into your studio with all customizations.'
+      )
+
+      setIsCreating(false)
+      setIsGenerating(false)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [selectedDesign, selectionVersion])
 
   // ========================================
   // GENERATE AI SUGGESTION
@@ -298,13 +315,15 @@ export default function DesignWorkspace({
     const currentRequest =
       ++requestVersion.current
 
-    // Existing backend currently stores:
-    // garment, color, fabric, description.
+    // Send all customizations to FastAPI/SQLite.
     const newDesign: CreatedDesign = {
       garment,
       color,
       fabric,
       description: trimmedDescription,
+      size,
+      sleeve_length: sleeveLength,
+      fit,
     }
 
     setIsCreating(true)
@@ -322,18 +341,20 @@ export default function DesignWorkspace({
         return
       }
 
+      const saved = response.design
+
       setDesign({
-        garment:
-          response.design.garment as GarmentType,
-        color: response.design.color,
-        fabric:
-          response.design.fabric as FabricType,
-        description:
-          response.design.description,
+        garment: saved.garment as GarmentType,
+        color: saved.color,
+        fabric: saved.fabric as FabricType,
+        description: saved.description,
+        size: saved.size,
+        sleeve_length: saved.sleeve_length,
+        fit: saved.fit,
       })
 
       setSuccessMessage(
-        'Your design has been saved successfully! Advanced customizations are currently preview-only.'
+        'Your design and all advanced customizations have been saved successfully!'
       )
 
       onDesignSaved()
@@ -1012,8 +1033,8 @@ export default function DesignWorkspace({
             </h3>
 
             <p>
-              Your fashion design was
-              saved to SQLite.
+              Your fashion design and all
+              customizations were saved to SQLite.
             </p>
 
             <p>
@@ -1038,18 +1059,22 @@ export default function DesignWorkspace({
 
             <p>
               <strong>Size:</strong>{' '}
-              {size} (preview only)
+              {design.size}
             </p>
 
             <p>
               <strong>Fit:</strong>{' '}
-              {fit} (preview only)
+              {design.fit}
             </p>
 
-            {hasSleeves && (
+            {(
+              design.garment === 'Dress' ||
+              design.garment === 'Shirt' ||
+              design.garment === 'Jacket'
+            ) && (
               <p>
                 <strong>Sleeves:</strong>{' '}
-                {sleeveLength} (preview only)
+                {design.sleeve_length}
               </p>
             )}
           </div>

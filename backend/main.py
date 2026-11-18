@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="StyleVerse AI API",
     description="Backend API for StyleVerse AI 3D Fashion Designer",
-    version="1.1.0",
+    version="1.2.0",
     lifespan=lifespan,
 )
 
@@ -52,14 +52,54 @@ app.add_middleware(
 
 
 # ==========================================
+# CUSTOMIZATION TYPES
+# ==========================================
+
+GarmentSize = Literal[
+    "XS", "S", "M", "L", "XL", "XXL"
+]
+
+SleeveLength = Literal[
+    "Sleeveless",
+    "Short",
+    "Three-Quarter",
+    "Long",
+]
+
+GarmentFit = Literal[
+    "Slim",
+    "Regular",
+    "Relaxed",
+    "Oversized",
+]
+
+
+# ==========================================
 # DESIGN REQUEST MODEL
 # ==========================================
 
 class DesignCreate(BaseModel):
-    garment: str = Field(min_length=1)
-    color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
-    fabric: str = Field(min_length=1)
-    description: str = Field(min_length=1)
+    garment: Literal[
+        "Dress", "Jacket", "Shirt", "Skirt", "Pants"
+    ]
+
+    color: str = Field(
+        pattern=r"^#[0-9a-fA-F]{6}$"
+    )
+
+    fabric: Literal[
+        "Cotton", "Silk", "Denim", "Leather"
+    ]
+
+    description: str = Field(
+        min_length=1,
+        max_length=1000,
+    )
+
+    # Defaults keep older frontend requests valid.
+    size: GarmentSize = "M"
+    sleeve_length: SleeveLength = "Short"
+    fit: GarmentFit = "Regular"
 
 
 # ==========================================
@@ -110,6 +150,24 @@ class AIDesignResponse(BaseModel):
 
 
 # ==========================================
+# SHARED DESIGN SELECT COLUMNS
+# ==========================================
+
+DESIGN_COLUMNS = """
+    id,
+    garment,
+    color,
+    fabric,
+    description,
+    size,
+    sleeve_length,
+    fit,
+    created_at,
+    is_favorite
+"""
+
+
+# ==========================================
 # HEALTH CHECK
 # GET /health
 # ==========================================
@@ -137,30 +195,29 @@ def create_design(design: DesignCreate):
                     garment,
                     color,
                     fabric,
-                    description
+                    description,
+                    size,
+                    sleeve_length,
+                    fit
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     design.garment,
                     design.color,
                     design.fabric,
                     design.description,
+                    design.size,
+                    design.sleeve_length,
+                    design.fit,
                 ),
             )
 
             design_id = cursor.lastrowid
 
             saved_design = connection.execute(
-                """
-                SELECT
-                    id,
-                    garment,
-                    color,
-                    fabric,
-                    description,
-                    created_at,
-                    is_favorite
+                f"""
+                SELECT {DESIGN_COLUMNS}
                 FROM designs
                 WHERE id = ?
                 """,
@@ -191,15 +248,8 @@ def get_designs():
     try:
         with get_connection() as connection:
             designs = connection.execute(
-                """
-                SELECT
-                    id,
-                    garment,
-                    color,
-                    fabric,
-                    description,
-                    created_at,
-                    is_favorite
+                f"""
+                SELECT {DESIGN_COLUMNS}
                 FROM designs
                 ORDER BY id DESC
                 """
@@ -259,15 +309,8 @@ def update_favorite(
             )
 
             updated_design = connection.execute(
-                """
-                SELECT
-                    id,
-                    garment,
-                    color,
-                    fabric,
-                    description,
-                    created_at,
-                    is_favorite
+                f"""
+                SELECT {DESIGN_COLUMNS}
                 FROM designs
                 WHERE id = ?
                 """,

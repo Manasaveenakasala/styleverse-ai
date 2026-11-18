@@ -24,11 +24,36 @@ export async function checkBackendHealth(): Promise<HealthResponse> {
 // DESIGN TYPES
 // ==========================================
 
+export type GarmentSize =
+  | 'XS'
+  | 'S'
+  | 'M'
+  | 'L'
+  | 'XL'
+  | 'XXL'
+
+export type SleeveLength =
+  | 'Sleeveless'
+  | 'Short'
+  | 'Three-Quarter'
+  | 'Long'
+
+export type GarmentFit =
+  | 'Slim'
+  | 'Regular'
+  | 'Relaxed'
+  | 'Oversized'
+
 export type DesignPayload = {
   garment: string
   color: string
   fabric: string
   description: string
+
+  // Advanced garment customizations
+  size: GarmentSize
+  sleeve_length: SleeveLength
+  fit: GarmentFit
 }
 
 export type SavedDesign = DesignPayload & {
@@ -140,9 +165,16 @@ export async function updateDesignFavorite(
 // FREE FASHION SUGGESTION GENERATOR
 // ==========================================
 
+// AI suggestions only return the basic design fields.
+// Size, sleeve length, and fit are selected in the studio.
+export type AIDesignSuggestion = Pick<
+  DesignPayload,
+  'garment' | 'color' | 'fabric' | 'description'
+>
+
 export type AIDesignResponse = {
   message: string
-  design: DesignPayload
+  design: AIDesignSuggestion
 }
 
 export async function generateDesignSuggestion(

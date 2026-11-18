@@ -43,10 +43,13 @@ def initialize_database():
     """
     Create the designs table if it does not exist.
 
-    For existing databases, add the is_favorite
-    column if it is missing.
+    For existing databases, add any missing
+    columns without deleting saved designs.
 
-    Existing saved designs are preserved.
+    Advanced customizations:
+    - size
+    - sleeve_length
+    - fit
     """
 
     with get_connection() as connection:
@@ -65,7 +68,10 @@ def initialize_database():
                 description TEXT NOT NULL,
                 created_at TEXT NOT NULL
                     DEFAULT CURRENT_TIMESTAMP,
-                is_favorite INTEGER NOT NULL DEFAULT 0
+                is_favorite INTEGER NOT NULL DEFAULT 0,
+                size TEXT NOT NULL DEFAULT 'M',
+                sleeve_length TEXT NOT NULL DEFAULT 'Short',
+                fit TEXT NOT NULL DEFAULT 'Regular'
             )
             """
         )
@@ -87,20 +93,37 @@ def initialize_database():
         # MIGRATE EXISTING DATABASE
         # --------------------------------------
 
-        if "is_favorite" not in column_names:
+        migrations = {
+            "is_favorite": (
+                "INTEGER NOT NULL DEFAULT 0"
+            ),
+            "size": (
+                "TEXT NOT NULL DEFAULT 'M'"
+            ),
+            "sleeve_length": (
+                "TEXT NOT NULL DEFAULT 'Short'"
+            ),
+            "fit": (
+                "TEXT NOT NULL DEFAULT 'Regular'"
+            ),
+        }
 
-            connection.execute(
-                """
-                ALTER TABLE designs
-                ADD COLUMN is_favorite
-                INTEGER NOT NULL DEFAULT 0
-                """
-            )
+        for column_name, column_definition in migrations.items():
 
-            print(
-                "Database migration completed: "
-                "is_favorite column added."
-            )
+            if column_name not in column_names:
+
+                connection.execute(
+                    f"""
+                    ALTER TABLE designs
+                    ADD COLUMN {column_name}
+                    {column_definition}
+                    """
+                )
+
+                print(
+                    "Database migration completed: "
+                    f"{column_name} column added."
+                )
 
         # --------------------------------------
         # SAVE DATABASE CHANGES
@@ -108,7 +131,10 @@ def initialize_database():
 
         connection.commit()
 
-    print("StyleVerse AI database initialized successfully.")
+    print(
+        "StyleVerse AI database initialized successfully."
+    )
+
 
 # ==========================================
 # RUN DATABASE INITIALIZATION DIRECTLY

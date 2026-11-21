@@ -7,10 +7,12 @@ import {
 } from "react";
 
 import {
+  createDesign,
   getSavedDesigns,
   deleteDesign,
   updateDesignFavorite,
   type SavedDesign,
+  type DesignPayload,
 } from "../services/api";
 
 import { exportDesignPDF } from "../utils/exportDesignPDF";
@@ -22,6 +24,7 @@ type SavedDesignsProps = {
 
 type DesignFilter = "all" | "favorites";
 type SortOption = "newest" | "oldest" | "name";
+
 type GarmentFilter =
   | "all"
   | "Dress"
@@ -35,17 +38,22 @@ type Feedback = {
   message: string;
 } | null;
 
+// ==========================================
+// CLIPBOARD HELPER
+// ==========================================
+
 async function copyDesignText(text: string) {
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
       return;
     } catch {
-      // Fall back to selecting a temporary textarea.
+      // Use the fallback below.
     }
   }
 
   const textarea = document.createElement("textarea");
+
   textarea.value = text;
   textarea.style.position = "fixed";
   textarea.style.opacity = "0";
@@ -64,6 +72,10 @@ async function copyDesignText(text: string) {
   }
 }
 
+// ==========================================
+// ERROR HELPER
+// ==========================================
+
 function getErrorMessage(
   error: unknown,
   fallback: string
@@ -73,13 +85,22 @@ function getErrorMessage(
     : fallback;
 }
 
+// ==========================================
+// SAVED DESIGNS COMPONENT
+// ==========================================
+
 export default function SavedDesigns({
   refreshKey,
   onLoadDesign,
 }: SavedDesignsProps) {
-  const [designs, setDesigns] = useState<SavedDesign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [retryKey, setRetryKey] = useState(0);
+  const [designs, setDesigns] =
+    useState<SavedDesign[]>([]);
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [retryKey, setRetryKey] =
+    useState(0);
 
   const [deletingId, setDeletingId] =
     useState<number | null>(null);
@@ -87,10 +108,15 @@ export default function SavedDesigns({
   const [updatingFavoriteId, setUpdatingFavoriteId] =
     useState<number | null>(null);
 
+  // Sprint 8 — Duplicate design state
+  const [duplicatingId, setDuplicatingId] =
+    useState<number | null>(null);
+
   const [filter, setFilter] =
     useState<DesignFilter>("all");
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] =
+    useState("");
 
   const [garmentFilter, setGarmentFilter] =
     useState<GarmentFilter>("all");
@@ -101,26 +127,49 @@ export default function SavedDesigns({
   const [feedback, setFeedback] =
     useState<Feedback>(null);
 
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] =
+    useState("");
 
   const [shareDesign, setShareDesign] =
     useState<SavedDesign | null>(null);
 
-  const [shareText, setShareText] = useState("");
-  const [isSharing, setIsSharing] = useState(false);
-  const [isCopying, setIsCopying] = useState(false);
+  const [shareText, setShareText] =
+    useState("");
 
-  const feedbackRef = useRef<HTMLDivElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [isSharing, setIsSharing] =
+    useState(false);
 
-  const showSuccess = useCallback((message: string) => {
-    setFeedback({ type: "success", message });
-  }, []);
+  const [isCopying, setIsCopying] =
+    useState(false);
 
-  const showError = useCallback((message: string) => {
-    setFeedback({ type: "error", message });
-  }, []);
+  const feedbackRef =
+    useRef<HTMLDivElement>(null);
+
+  const dialogRef =
+    useRef<HTMLDivElement>(null);
+
+  const closeButtonRef =
+    useRef<HTMLButtonElement>(null);
+
+  const showSuccess = useCallback(
+    (message: string) => {
+      setFeedback({
+        type: "success",
+        message,
+      });
+    },
+    []
+  );
+
+  const showError = useCallback(
+    (message: string) => {
+      setFeedback({
+        type: "error",
+        message,
+      });
+    },
+    []
+  );
 
   // ==========================================
   // LOAD SAVED DESIGNS
@@ -169,20 +218,25 @@ export default function SavedDesigns({
   useEffect(() => {
     if (!shareDesign) return;
 
-    const previouslyFocused = document.activeElement;
+    const previouslyFocused =
+      document.activeElement;
+
     closeButtonRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setShareDesign(null);
+        if (!isSharing && !isCopying) {
+          setShareDesign(null);
+        }
         return;
       }
 
       if (event.key !== "Tab") return;
 
-      const buttons = dialogRef.current?.querySelectorAll<
-        HTMLButtonElement
-      >('button:not(:disabled)');
+      const buttons =
+        dialogRef.current?.querySelectorAll<
+          HTMLButtonElement
+        >('button:not(:disabled)');
 
       if (!buttons?.length) return;
 
@@ -204,7 +258,10 @@ export default function SavedDesigns({
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
 
     return () => {
       document.removeEventListener(
@@ -212,11 +269,17 @@ export default function SavedDesigns({
         handleKeyDown
       );
 
-      if (previouslyFocused instanceof HTMLElement) {
+      if (
+        previouslyFocused instanceof HTMLElement
+      ) {
         previouslyFocused.focus();
       }
     };
-  }, [shareDesign]);
+  }, [shareDesign, isSharing, isCopying]);
+
+  // ==========================================
+  // FILTER AND SORT DESIGNS
+  // ==========================================
 
   const favoriteCount = designs.filter(
     (design) => Boolean(design.is_favorite)
@@ -234,13 +297,18 @@ export default function SavedDesigns({
         design.garment === garmentFilter
     )
     .filter((design) => {
-      const query = searchQuery.trim().toLowerCase();
+      const query =
+        searchQuery.trim().toLowerCase();
 
       if (!query) return true;
 
       return [
         design.garment,
         design.fabric,
+        design.pattern ?? "Solid",
+        design.size,
+        design.sleeve_length,
+        design.fit,
         design.color,
         design.description,
       ].some((value) =>
@@ -264,25 +332,96 @@ export default function SavedDesigns({
 
   const isUpdating =
     deletingId !== null ||
-    updatingFavoriteId !== null;
+    updatingFavoriteId !== null ||
+    duplicatingId !== null;
+
+  // ==========================================
+  // DUPLICATE DESIGN
+  // ==========================================
+
+  async function handleDuplicateDesign(
+    design: SavedDesign
+  ) {
+    if (isUpdating) return;
+
+    setDuplicatingId(design.id);
+    setFeedback(null);
+
+    try {
+      // Copy all customizable fields.
+      // Do not copy the original ID, timestamp,
+      // or favorite status.
+
+      const duplicatePayload: DesignPayload = {
+        garment: design.garment,
+        color: design.color,
+        fabric: design.fabric,
+        description: design.description,
+        size: design.size ?? "M",
+        sleeve_length:
+          design.sleeve_length ?? "Short",
+        fit: design.fit ?? "Regular",
+        pattern: design.pattern ?? "Solid",
+      };
+
+      // Existing POST /designs creates a new row.
+      const response = await createDesign(
+        duplicatePayload
+      );
+
+      const duplicatedDesign = response.design;
+
+      // Add the new design to the collection.
+      setDesigns((previous) => [
+        duplicatedDesign,
+        ...previous.filter(
+          (item) =>
+            item.id !== duplicatedDesign.id
+        ),
+      ]);
+
+      // Show all designs so the new copy is visible.
+      setFilter("all");
+      setSearchQuery("");
+      setGarmentFilter("all");
+      setSortOption("newest");
+
+      showSuccess(
+        `Design #${design.id} duplicated successfully as Design #${duplicatedDesign.id}.`
+      );
+    } catch (error) {
+      showError(
+        getErrorMessage(
+          error,
+          "Unable to duplicate design."
+        )
+      );
+    } finally {
+      setDuplicatingId(null);
+    }
+  }
 
   // ==========================================
   // FAVORITE
   // ==========================================
 
-  async function handleToggleFavorite(design: SavedDesign) {
+  async function handleToggleFavorite(
+    design: SavedDesign
+  ) {
     if (isUpdating) return;
 
     setUpdatingFavoriteId(design.id);
     setFeedback(null);
 
     try {
-      const nextFavorite = !Boolean(design.is_favorite);
+      const nextFavorite =
+        !design.is_favorite;
 
-      const response = await updateDesignFavorite(
-        design.id,
-        nextFavorite
-      );
+      const response =
+        await updateDesignFavorite(
+          design.id,
+          nextFavorite
+        );
 
       setDesigns((previous) =>
         previous.map((item) =>
@@ -310,10 +449,12 @@ export default function SavedDesigns({
   }
 
   // ==========================================
-  // DELETE
+  // DELETE DESIGN
   // ==========================================
 
-  async function handleDeleteDesign(designId: number) {
+  async function handleDeleteDesign(
+    designId: number
+  ) {
     if (isUpdating) return;
 
     if (
@@ -336,7 +477,9 @@ export default function SavedDesigns({
         )
       );
 
-      showSuccess("Design deleted successfully.");
+      showSuccess(
+        "Design deleted successfully."
+      );
     } catch (error) {
       showError(
         getErrorMessage(
@@ -350,10 +493,12 @@ export default function SavedDesigns({
   }
 
   // ==========================================
-  // LOAD INTO STUDIO
+  // LOAD DESIGN INTO STUDIO
   // ==========================================
 
-  function handleLoadDesign(design: SavedDesign) {
+  function handleLoadDesign(
+    design: SavedDesign
+  ) {
     onLoadDesign(design);
 
     showSuccess(
@@ -365,27 +510,46 @@ export default function SavedDesigns({
   // JSON EXPORT
   // ==========================================
 
-  function handleDownloadJSON(design: SavedDesign) {
+  function handleDownloadJSON(
+    design: SavedDesign
+  ) {
     try {
       const exportData = {
         id: design.id,
         garment: design.garment,
         color: design.color,
         fabric: design.fabric,
+        pattern: design.pattern ?? "Solid",
+        size: design.size,
+        sleeve_length: design.sleeve_length,
+        fit: design.fit,
         description: design.description,
         created_at: design.created_at,
-        is_favorite: Boolean(design.is_favorite),
+        is_favorite:
+          Boolean(design.is_favorite),
       };
 
       const blob = new Blob(
-        [JSON.stringify(exportData, null, 2)],
-        { type: "application/json" }
+        [
+          JSON.stringify(
+            exportData,
+            null,
+            2
+          ),
+        ],
+        {
+          type: "application/json",
+        }
       );
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const url =
+        URL.createObjectURL(blob);
+
+      const link =
+        document.createElement("a");
 
       link.href = url;
+
       link.download =
         `styleverse-${design.garment.toLowerCase()}-${design.id}.json`;
 
@@ -393,12 +557,13 @@ export default function SavedDesigns({
       link.click();
       link.remove();
 
-      // Give the browser time to start the download.
       window.setTimeout(() => {
         URL.revokeObjectURL(url);
       }, 1000);
 
-      showSuccess("JSON download started.");
+      showSuccess(
+        "JSON download started."
+      );
     } catch (error) {
       showError(
         getErrorMessage(
@@ -413,10 +578,15 @@ export default function SavedDesigns({
   // PDF EXPORT
   // ==========================================
 
-  function handleDownloadPDF(design: SavedDesign) {
+  function handleDownloadPDF(
+    design: SavedDesign
+  ) {
     try {
       exportDesignPDF(design);
-      showSuccess("PDF download started.");
+
+      showSuccess(
+        "PDF download started."
+      );
     } catch (error) {
       showError(
         getErrorMessage(
@@ -428,15 +598,21 @@ export default function SavedDesigns({
   }
 
   // ==========================================
-  // SHARE
+  // SHARE DESIGN
   // ==========================================
 
-  function handleShareDesign(design: SavedDesign) {
+  function handleShareDesign(
+    design: SavedDesign
+  ) {
     const text = [
       `StyleVerse AI - ${design.garment} #${design.id}`,
       `Garment: ${design.garment}`,
       `Fabric: ${design.fabric}`,
+      `Pattern: ${design.pattern ?? "Solid"}`,
       `Color: ${design.color.toUpperCase()}`,
+      `Size: ${design.size}`,
+      `Sleeve Length: ${design.sleeve_length}`,
+      `Fit: ${design.fit}`,
       `Description: ${design.description}`,
       `Created: ${design.created_at}`,
     ].join("\n");
@@ -459,12 +635,16 @@ export default function SavedDesigns({
 
     try {
       await navigator.share({
-        title: `StyleVerse AI - ${shareDesign.garment}`,
+        title:
+          `StyleVerse AI - ${shareDesign.garment}`,
         text: shareText,
       });
 
       setShareDesign(null);
-      showSuccess("Design shared successfully.");
+
+      showSuccess(
+        "Design shared successfully."
+      );
     } catch (error) {
       if (
         error instanceof DOMException &&
@@ -487,9 +667,12 @@ export default function SavedDesigns({
     setIsCopying(true);
 
     try {
-      await copyDesignText(shareText);
+      await copyDesignText(
+        shareText
+      );
 
       setShareDesign(null);
+
       showSuccess(
         "Design details copied to your clipboard."
       );
@@ -502,6 +685,10 @@ export default function SavedDesigns({
     }
   }
 
+  // ==========================================
+  // CLEAR FILTERS
+  // ==========================================
+
   function handleClearFilters() {
     setFilter("all");
     setSearchQuery("");
@@ -509,8 +696,14 @@ export default function SavedDesigns({
     setSortOption("newest");
   }
 
+  // ==========================================
+  // RENDER
+  // ==========================================
+
   return (
     <section className="saved-designs">
+      {/* HEADER */}
+
       <div className="saved-designs-header">
         <span className="eyebrow">
           YOUR FASHION COLLECTION
@@ -519,12 +712,15 @@ export default function SavedDesigns({
         <h2>My Saved Designs</h2>
 
         <p>
-          Explore, organize, customize, export,
-          and share your creations.
+          Explore, duplicate, organize,
+          customize, export, and share
+          your creations.
         </p>
       </div>
 
-      {/* FILTERS */}
+      {/* ==================================
+          FILTERS
+      ================================== */}
 
       <div
         className="saved-design-filters"
@@ -534,10 +730,16 @@ export default function SavedDesigns({
         <button
           type="button"
           className={`filter-button ${
-            filter === "all" ? "active" : ""
+            filter === "all"
+              ? "active"
+              : ""
           }`}
-          aria-pressed={filter === "all"}
-          onClick={() => setFilter("all")}
+          aria-pressed={
+            filter === "all"
+          }
+          onClick={() =>
+            setFilter("all")
+          }
         >
           All Designs ({designs.length})
         </button>
@@ -545,23 +747,33 @@ export default function SavedDesigns({
         <button
           type="button"
           className={`filter-button ${
-            filter === "favorites" ? "active" : ""
+            filter === "favorites"
+              ? "active"
+              : ""
           }`}
-          aria-pressed={filter === "favorites"}
-          onClick={() => setFilter("favorites")}
+          aria-pressed={
+            filter === "favorites"
+          }
+          onClick={() =>
+            setFilter("favorites")
+          }
         >
           ♥ Favorites ({favoriteCount})
         </button>
       </div>
 
-      {/* SEARCH */}
+      {/* ==================================
+          SEARCH AND SORT
+      ================================== */}
 
       <div className="design-search-controls">
         <input
           type="search"
           value={searchQuery}
           onChange={(event) =>
-            setSearchQuery(event.target.value)
+            setSearchQuery(
+              event.target.value
+            )
           }
           placeholder="Search designs..."
           aria-label="Search saved designs"
@@ -576,12 +788,29 @@ export default function SavedDesigns({
           }
           aria-label="Filter by garment"
         >
-          <option value="all">All Garments</option>
-          <option value="Dress">Dresses</option>
-          <option value="Jacket">Jackets</option>
-          <option value="Shirt">Shirts</option>
-          <option value="Skirt">Skirts</option>
-          <option value="Pants">Pants</option>
+          <option value="all">
+            All Garments
+          </option>
+
+          <option value="Dress">
+            Dresses
+          </option>
+
+          <option value="Jacket">
+            Jackets
+          </option>
+
+          <option value="Shirt">
+            Shirts
+          </option>
+
+          <option value="Skirt">
+            Skirts
+          </option>
+
+          <option value="Pants">
+            Pants
+          </option>
         </select>
 
         <select
@@ -593,23 +822,38 @@ export default function SavedDesigns({
           }
           aria-label="Sort saved designs"
         >
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="name">Garment Name (A-Z)</option>
+          <option value="newest">
+            Newest First
+          </option>
+
+          <option value="oldest">
+            Oldest First
+          </option>
+
+          <option value="name">
+            Garment Name (A-Z)
+          </option>
         </select>
 
         <button
           type="button"
           className="filter-button"
-          onClick={handleClearFilters}
+          onClick={
+            handleClearFilters
+          }
         >
           Clear Filters
         </button>
       </div>
 
-      {/* FEEDBACK */}
+      {/* ==================================
+          FEEDBACK
+      ================================== */}
 
-      <div ref={feedbackRef} aria-live="polite">
+      <div
+        ref={feedbackRef}
+        aria-live="polite"
+      >
         {feedback && (
           <div
             className={`saved-feedback saved-feedback-${feedback.type}`}
@@ -619,11 +863,15 @@ export default function SavedDesigns({
                 : "status"
             }
           >
-            <span>{feedback.message}</span>
+            <span>
+              {feedback.message}
+            </span>
 
             <button
               type="button"
-              onClick={() => setFeedback(null)}
+              onClick={() =>
+                setFeedback(null)
+              }
               aria-label="Dismiss notification"
             >
               ×
@@ -632,7 +880,9 @@ export default function SavedDesigns({
         )}
       </div>
 
-      {/* LOADING */}
+      {/* ==================================
+          LOADING
+      ================================== */}
 
       {isLoading && (
         <div
@@ -643,21 +893,34 @@ export default function SavedDesigns({
             className="studio-spinner"
             aria-hidden="true"
           />
-          <span>Loading your fashion collection...</span>
+
+          <span>
+            Loading your fashion collection...
+          </span>
         </div>
       )}
 
-      {/* LOAD ERROR */}
+      {/* ==================================
+          LOAD ERROR
+      ================================== */}
 
       {!isLoading && loadError && (
-        <div className="saved-design-error" role="alert">
-          <p>{loadError}</p>
+        <div
+          className="saved-design-error"
+          role="alert"
+        >
+          <p>
+            {loadError}
+          </p>
 
           <button
             type="button"
             className="filter-button"
             onClick={() =>
-              setRetryKey((previous) => previous + 1)
+              setRetryKey(
+                (previous) =>
+                  previous + 1
+              )
             }
           >
             Retry Loading
@@ -665,7 +928,9 @@ export default function SavedDesigns({
         </div>
       )}
 
-      {/* RESULTS */}
+      {/* ==================================
+          RESULTS
+      ================================== */}
 
       {!isLoading && !loadError && (
         <p className="saved-design-results">
@@ -674,13 +939,18 @@ export default function SavedDesigns({
         </p>
       )}
 
-      {/* EMPTY STATES */}
+      {/* ==================================
+          EMPTY STATES
+      ================================== */}
 
       {!isLoading &&
         !loadError &&
         designs.length === 0 && (
           <div className="saved-designs-empty">
-            <h3>No saved designs yet</h3>
+            <h3>
+              No saved designs yet
+            </h3>
+
             <p>
               Create your first fashion design
               in the studio above.
@@ -693,20 +963,29 @@ export default function SavedDesigns({
         designs.length > 0 &&
         filteredDesigns.length === 0 && (
           <div className="saved-designs-empty">
-            <h3>No matching designs</h3>
-            <p>Try changing your search or filters.</p>
+            <h3>
+              No matching designs
+            </h3>
+
+            <p>
+              Try changing your search or filters.
+            </p>
 
             <button
               type="button"
               className="filter-button"
-              onClick={handleClearFilters}
+              onClick={
+                handleClearFilters
+              }
             >
               Clear Filters
             </button>
           </div>
         )}
 
-      {/* DESIGN CARDS */}
+      {/* ==================================
+          DESIGN CARDS
+      ================================== */}
 
       {!isLoading &&
         !loadError &&
@@ -714,7 +993,9 @@ export default function SavedDesigns({
           <div className="saved-designs-grid">
             {filteredDesigns.map((design) => {
               const isFavorite =
-                Boolean(design.is_favorite);
+                Boolean(
+                  design.is_favorite
+                );
 
               const isFavoriteUpdating =
                 updatingFavoriteId === design.id;
@@ -722,22 +1003,32 @@ export default function SavedDesigns({
               const isDeleting =
                 deletingId === design.id;
 
+              const isDuplicating =
+                duplicatingId === design.id;
+
               return (
                 <article
                   key={design.id}
                   className="saved-design-card"
                   aria-busy={
-                    isFavoriteUpdating || isDeleting
+                    isFavoriteUpdating ||
+                    isDeleting ||
+                    isDuplicating
                   }
                 >
+                  {/* DESIGN COLOR */}
+
                   <div
                     className="saved-design-color"
                     style={{
-                      backgroundColor: design.color,
+                      backgroundColor:
+                        design.color,
                     }}
                     aria-label={`Design color ${design.color}`}
                     role="img"
                   />
+
+                  {/* DESIGN DETAILS */}
 
                   <div className="saved-design-info">
                     <h3>
@@ -745,36 +1036,90 @@ export default function SavedDesigns({
                     </h3>
 
                     <p>
-                      <strong>Fabric:</strong>{" "}
+                      <strong>
+                        Fabric:
+                      </strong>{" "}
                       {design.fabric}
                     </p>
 
                     <p>
-                      <strong>Color:</strong>{" "}
+                      <strong>
+                        Pattern:
+                      </strong>{" "}
+                      {design.pattern ?? "Solid"}
+                    </p>
+
+                    <p>
+                      <strong>
+                        Color:
+                      </strong>{" "}
                       {design.color.toUpperCase()}
                     </p>
 
                     <p>
-                      <strong>Description:</strong>{" "}
+                      <strong>
+                        Size:
+                      </strong>{" "}
+                      {design.size}
+                    </p>
+
+                    <p>
+                      <strong>
+                        Fit:
+                      </strong>{" "}
+                      {design.fit}
+                    </p>
+
+                    {(
+                      design.garment === "Dress" ||
+                      design.garment === "Shirt" ||
+                      design.garment === "Jacket"
+                    ) && (
+                      <p>
+                        <strong>
+                          Sleeves:
+                        </strong>{" "}
+                        {design.sleeve_length}
+                      </p>
+                    )}
+
+                    <p>
+                      <strong>
+                        Description:
+                      </strong>{" "}
                       {design.description}
                     </p>
 
                     <p>
-                      <strong>Created:</strong>{" "}
+                      <strong>
+                        Created:
+                      </strong>{" "}
                       {design.created_at}
                     </p>
                   </div>
 
+                  {/* ACTION BUTTONS */}
+
                   <div className="saved-design-actions">
+                    {/* FAVORITE */}
+
                     <button
                       type="button"
                       className={`favorite-button ${
-                        isFavorite ? "is-favorite" : ""
+                        isFavorite
+                          ? "is-favorite"
+                          : ""
                       }`}
-                      aria-pressed={isFavorite}
-                      disabled={isUpdating}
+                      aria-pressed={
+                        isFavorite
+                      }
+                      disabled={
+                        isUpdating
+                      }
                       onClick={() =>
-                        void handleToggleFavorite(design)
+                        void handleToggleFavorite(
+                          design
+                        )
                       }
                     >
                       {isFavoriteUpdating
@@ -784,52 +1129,93 @@ export default function SavedDesigns({
                           : "♡ Favorite"}
                     </button>
 
+                    {/* LOAD IN STUDIO */}
+
                     <button
                       type="button"
                       className="primary-button"
                       onClick={() =>
-                        handleLoadDesign(design)
+                        handleLoadDesign(
+                          design
+                        )
                       }
                     >
                       Load in Studio
                     </button>
 
+                    {/* DUPLICATE DESIGN */}
+
+                    <button
+                      type="button"
+                      className="download-button"
+                      disabled={
+                        isUpdating
+                      }
+                      onClick={() =>
+                        void handleDuplicateDesign(
+                          design
+                        )
+                      }
+                    >
+                      {isDuplicating
+                        ? "Duplicating..."
+                        : "⧉ Duplicate Design"}
+                    </button>
+
+                    {/* JSON EXPORT */}
+
                     <button
                       type="button"
                       className="download-button"
                       onClick={() =>
-                        handleDownloadJSON(design)
+                        handleDownloadJSON(
+                          design
+                        )
                       }
                     >
                       ↓ Download JSON
                     </button>
 
+                    {/* PDF EXPORT */}
+
                     <button
                       type="button"
                       className="download-button"
                       onClick={() =>
-                        handleDownloadPDF(design)
+                        handleDownloadPDF(
+                          design
+                        )
                       }
                     >
                       📄 Download PDF
                     </button>
 
+                    {/* SHARE */}
+
                     <button
                       type="button"
                       className="download-button"
                       onClick={() =>
-                        handleShareDesign(design)
+                        handleShareDesign(
+                          design
+                        )
                       }
                     >
                       ↗ Share Design
                     </button>
 
+                    {/* DELETE */}
+
                     <button
                       type="button"
                       className="delete-button"
-                      disabled={isUpdating}
+                      disabled={
+                        isUpdating
+                      }
                       onClick={() =>
-                        void handleDeleteDesign(design.id)
+                        void handleDeleteDesign(
+                          design.id
+                        )
                       }
                     >
                       {isDeleting
@@ -843,13 +1229,18 @@ export default function SavedDesigns({
           </div>
         )}
 
-      {/* SHARE DIALOG */}
+      {/* ==================================
+          SHARE DIALOG
+      ================================== */}
 
       {shareDesign && (
         <div
           className="share-dialog-backdrop"
           onClick={() => {
-            if (!isSharing && !isCopying) {
+            if (
+              !isSharing &&
+              !isCopying
+            ) {
               setShareDesign(null);
             }
           }}
@@ -874,7 +1265,10 @@ export default function SavedDesigns({
                 ref={closeButtonRef}
                 type="button"
                 className="share-dialog-close"
-                disabled={isSharing || isCopying}
+                disabled={
+                  isSharing ||
+                  isCopying
+                }
                 onClick={() =>
                   setShareDesign(null)
                 }
@@ -885,14 +1279,15 @@ export default function SavedDesigns({
             </div>
 
             <p>
-              Share your creation or copy its details.
+              Share your creation or
+              copy its details.
             </p>
 
             <textarea
               className="share-dialog-text"
               value={shareText}
               readOnly
-              rows={7}
+              rows={10}
               aria-label="Design details to share"
               onFocus={(event) =>
                 event.target.select()
@@ -900,11 +1295,15 @@ export default function SavedDesigns({
             />
 
             <div className="share-dialog-actions">
-              {typeof navigator.share === "function" && (
+              {typeof navigator.share ===
+                "function" && (
                 <button
                   type="button"
                   className="primary-button"
-                  disabled={isSharing || isCopying}
+                  disabled={
+                    isSharing ||
+                    isCopying
+                  }
                   onClick={() =>
                     void handleNativeShare()
                   }
@@ -918,7 +1317,10 @@ export default function SavedDesigns({
               <button
                 type="button"
                 className="download-button"
-                disabled={isSharing || isCopying}
+                disabled={
+                  isSharing ||
+                  isCopying
+                }
                 onClick={() =>
                   void handleCopyShareText()
                 }
@@ -931,7 +1333,10 @@ export default function SavedDesigns({
               <button
                 type="button"
                 className="filter-button"
-                disabled={isSharing || isCopying}
+                disabled={
+                  isSharing ||
+                  isCopying
+                }
                 onClick={() =>
                   setShareDesign(null)
                 }
@@ -941,7 +1346,10 @@ export default function SavedDesigns({
             </div>
 
             {feedback?.type === "error" && (
-              <p className="design-error" role="alert">
+              <p
+                className="design-error"
+                role="alert"
+              >
                 {feedback.message}
               </p>
             )}

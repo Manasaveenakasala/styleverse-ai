@@ -1,19 +1,19 @@
 
 import { useEffect, useRef, useState } from 'react'
+
 import GarmentViewer, {
   type GarmentSize,
   type SleeveLength,
   type GarmentFit,
+  type FabricPattern,
 } from './GarmentViewer'
+
 import {
   createDesign,
+  updateDesign,
   generateDesignSuggestion,
   type SavedDesign,
 } from '../services/api'
-
-// ==========================================
-// TYPES
-// ==========================================
 
 type GarmentType =
   | 'Dress'
@@ -36,6 +36,7 @@ type CreatedDesign = {
   size: GarmentSize
   sleeve_length: SleeveLength
   fit: GarmentFit
+  pattern: FabricPattern
 }
 
 type DesignWorkspaceProps = {
@@ -43,10 +44,6 @@ type DesignWorkspaceProps = {
   selectedDesign: SavedDesign | null
   selectionVersion: number
 }
-
-// ==========================================
-// GARMENT OPTIONS
-// ==========================================
 
 const garmentOptions: {
   name: GarmentType
@@ -59,35 +56,15 @@ const garmentOptions: {
   { name: 'Pants', icon: '👖' },
 ]
 
-// ==========================================
-// FABRIC OPTIONS
-// ==========================================
-
 const fabricOptions: {
   name: FabricType
   description: string
 }[] = [
-  {
-    name: 'Cotton',
-    description: 'Soft & breathable',
-  },
-  {
-    name: 'Silk',
-    description: 'Smooth & elegant',
-  },
-  {
-    name: 'Denim',
-    description: 'Casual & durable',
-  },
-  {
-    name: 'Leather',
-    description: 'Bold & structured',
-  },
+  { name: 'Cotton', description: 'Soft & breathable' },
+  { name: 'Silk', description: 'Smooth & elegant' },
+  { name: 'Denim', description: 'Casual & durable' },
+  { name: 'Leather', description: 'Bold & structured' },
 ]
-
-// ==========================================
-// COLOR PRESETS
-// ==========================================
 
 const colorPresets = [
   { name: 'Rose', value: '#a53d78' },
@@ -97,17 +74,8 @@ const colorPresets = [
   { name: 'Green', value: '#42856a' },
 ]
 
-// ==========================================
-// CUSTOMIZATION OPTIONS
-// ==========================================
-
 const garmentSizes: GarmentSize[] = [
-  'XS',
-  'S',
-  'M',
-  'L',
-  'XL',
-  'XXL',
+  'XS', 'S', 'M', 'L', 'XL', 'XXL',
 ]
 
 const sleeveOptions: SleeveLength[] = [
@@ -124,9 +92,13 @@ const fitOptions: GarmentFit[] = [
   'Oversized',
 ]
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
+const patternOptions: FabricPattern[] = [
+  'Solid',
+  'Stripes',
+  'Floral',
+  'Plaid',
+  'Polka Dots',
+]
 
 export default function DesignWorkspace({
   onDesignSaved,
@@ -140,8 +112,7 @@ export default function DesignWorkspace({
   const [garment, setGarment] =
     useState<GarmentType>('Dress')
 
-  const [color, setColor] =
-    useState('#a53d78')
+  const [color, setColor] = useState('#a53d78')
 
   const [fabric, setFabric] =
     useState<FabricType>('Cotton')
@@ -155,27 +126,32 @@ export default function DesignWorkspace({
   const [fit, setFit] =
     useState<GarmentFit>('Regular')
 
-  const [description, setDescription] =
-    useState('')
+  const [pattern, setPattern] =
+    useState<FabricPattern>('Solid')
 
-  const [isCreating, setIsCreating] =
-    useState(false)
+  const [description, setDescription] = useState('')
 
-  const [isGenerating, setIsGenerating] =
-    useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const [error, setError] =
-    useState('')
-
-  const [successMessage, setSuccessMessage] =
-    useState('')
+  const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const [design, setDesign] =
     useState<CreatedDesign | null>(null)
 
+  // Sprint 9: Track the saved design being edited.
+  const [editingDesignId, setEditingDesignId] =
+    useState<number | null>(null)
+
+  const [lastSavedAction, setLastSavedAction] =
+    useState<'created' | 'updated' | null>(null)
+
   const requestVersion = useRef(0)
 
   const isBusy = isCreating || isGenerating
+  const isEditMode = editingDesignId !== null
+
   const trimmedDescription = description.trim()
 
   const hasSleeves =
@@ -184,7 +160,7 @@ export default function DesignWorkspace({
     garment === 'Jacket'
 
   // ========================================
-  // LOAD SAVED DESIGN
+  // LOAD SAVED DESIGN INTO EDIT MODE
   // ========================================
 
   useEffect(() => {
@@ -192,8 +168,6 @@ export default function DesignWorkspace({
 
     requestVersion.current += 1
 
-    // Schedule updates after the effect to avoid
-    // react-hooks/set-state-in-effect lint errors.
     const timeoutId = window.setTimeout(() => {
       setGarment(
         selectedDesign.garment as GarmentType
@@ -206,9 +180,6 @@ export default function DesignWorkspace({
       )
 
       setDescription(selectedDesign.description)
-
-      // Restore saved advanced customizations.
-      // Fallbacks support older saved designs.
       setSize(selectedDesign.size ?? 'M')
 
       setSleeveLength(
@@ -216,12 +187,17 @@ export default function DesignWorkspace({
       )
 
       setFit(selectedDesign.fit ?? 'Regular')
+      setPattern(selectedDesign.pattern ?? 'Solid')
+
+      // Enable edit mode for this exact design.
+      setEditingDesignId(selectedDesign.id)
 
       setDesign(null)
+      setLastSavedAction(null)
       setError('')
 
       setSuccessMessage(
-        'Saved design loaded into your studio with all customizations.'
+        `Editing Design #${selectedDesign.id}. Make your changes and click Update Existing Design.`
       )
 
       setIsCreating(false)
@@ -234,7 +210,55 @@ export default function DesignWorkspace({
   }, [selectedDesign, selectionVersion])
 
   // ========================================
-  // GENERATE AI SUGGESTION
+  // CLEAR FEEDBACK
+  // ========================================
+
+  function clearFeedback() {
+    setError('')
+    setSuccessMessage('')
+    setDesign(null)
+    setLastSavedAction(null)
+  }
+
+  // ========================================
+  // RESET TO NEW DESIGN MODE
+  // ========================================
+
+  function handleReset() {
+    requestVersion.current += 1
+
+    setGarment('Dress')
+    setColor('#a53d78')
+    setFabric('Cotton')
+    setSize('M')
+    setSleeveLength('Short')
+    setFit('Regular')
+    setPattern('Solid')
+    setDescription('')
+
+    setEditingDesignId(null)
+    setDesign(null)
+    setLastSavedAction(null)
+    setError('')
+    setSuccessMessage('')
+    setIsCreating(false)
+    setIsGenerating(false)
+  }
+
+  // ========================================
+  // EXIT EDIT MODE
+  // ========================================
+
+  function handleExitEditMode() {
+    handleReset()
+
+    setSuccessMessage(
+      'Edit mode closed. You can now create a new design.'
+    )
+  }
+
+  // ========================================
+  // AI DESIGN SUGGESTION
   // ========================================
 
   async function handleGenerateSuggestion() {
@@ -245,23 +269,17 @@ export default function DesignWorkspace({
       return
     }
 
-    const currentRequest =
-      ++requestVersion.current
+    const currentRequest = ++requestVersion.current
 
     setIsGenerating(true)
-    setError('')
-    setSuccessMessage('')
-    setDesign(null)
+    clearFeedback()
 
     try {
-      const response =
-        await generateDesignSuggestion(
-          trimmedDescription
-        )
+      const response = await generateDesignSuggestion(
+        trimmedDescription
+      )
 
-      if (
-        currentRequest !== requestVersion.current
-      ) {
+      if (currentRequest !== requestVersion.current) {
         return
       }
 
@@ -280,12 +298,12 @@ export default function DesignWorkspace({
       setDescription(suggestion.description)
 
       setSuccessMessage(
-        'Your fashion suggestion is ready! Review the preview and save your design.'
+        isEditMode
+          ? 'AI suggestion applied. Review your changes and update the existing design.'
+          : 'Your fashion suggestion is ready! Review the preview and save your design.'
       )
     } catch (err) {
-      if (
-        currentRequest !== requestVersion.current
-      ) {
+      if (currentRequest !== requestVersion.current) {
         return
       }
 
@@ -295,28 +313,25 @@ export default function DesignWorkspace({
           : 'Unable to generate a fashion suggestion.'
       )
     } finally {
-      if (
-        currentRequest === requestVersion.current
-      ) {
+      if (currentRequest === requestVersion.current) {
         setIsGenerating(false)
       }
     }
   }
 
   // ========================================
-  // CREATE AND SAVE DESIGN
+  // CREATE OR UPDATE DESIGN
   // ========================================
 
-  async function handleCreateDesign() {
+  async function handleSaveDesign() {
     if (!trimmedDescription || isBusy) {
       return
     }
 
-    const currentRequest =
-      ++requestVersion.current
+    const currentRequest = ++requestVersion.current
+    const currentEditingId = editingDesignId
 
-    // Send all customizations to FastAPI/SQLite.
-    const newDesign: CreatedDesign = {
+    const designPayload: CreatedDesign = {
       garment,
       color,
       fabric,
@@ -324,20 +339,25 @@ export default function DesignWorkspace({
       size,
       sleeve_length: sleeveLength,
       fit,
+      pattern,
     }
 
     setIsCreating(true)
-    setError('')
-    setSuccessMessage('')
-    setDesign(null)
+    clearFeedback()
 
     try {
+      // Sprint 9:
+      // PUT updates the existing SQLite row.
+      // POST creates a completely new design.
       const response =
-        await createDesign(newDesign)
+        currentEditingId !== null
+          ? await updateDesign(
+              currentEditingId,
+              designPayload
+            )
+          : await createDesign(designPayload)
 
-      if (
-        currentRequest !== requestVersion.current
-      ) {
+      if (currentRequest !== requestVersion.current) {
         return
       }
 
@@ -351,17 +371,27 @@ export default function DesignWorkspace({
         size: saved.size,
         sleeve_length: saved.sleeve_length,
         fit: saved.fit,
+        pattern: saved.pattern ?? 'Solid',
       })
 
-      setSuccessMessage(
-        'Your design and all advanced customizations have been saved successfully!'
-      )
+      if (currentEditingId !== null) {
+        setLastSavedAction('updated')
 
+        setSuccessMessage(
+          `Design #${saved.id} updated successfully! Your changes were saved to the original design.`
+        )
+      } else {
+        setLastSavedAction('created')
+
+        setSuccessMessage(
+          `Design #${saved.id} created and saved successfully!`
+        )
+      }
+
+      // Refresh My Saved Designs.
       onDesignSaved()
     } catch (err) {
-      if (
-        currentRequest !== requestVersion.current
-      ) {
+      if (currentRequest !== requestVersion.current) {
         return
       }
 
@@ -371,44 +401,10 @@ export default function DesignWorkspace({
           : 'Unable to save design. Please try again.'
       )
     } finally {
-      if (
-        currentRequest === requestVersion.current
-      ) {
+      if (currentRequest === requestVersion.current) {
         setIsCreating(false)
       }
     }
-  }
-
-  // ========================================
-  // RESET DESIGN
-  // ========================================
-
-  function handleReset() {
-    requestVersion.current += 1
-
-    setGarment('Dress')
-    setColor('#a53d78')
-    setFabric('Cotton')
-    setSize('M')
-    setSleeveLength('Short')
-    setFit('Regular')
-    setDescription('')
-
-    setDesign(null)
-    setError('')
-    setSuccessMessage('')
-    setIsCreating(false)
-    setIsGenerating(false)
-  }
-
-  // ========================================
-  // CLEAR FEEDBACK
-  // ========================================
-
-  function clearFeedback() {
-    setError('')
-    setSuccessMessage('')
-    setDesign(null)
   }
 
   // ========================================
@@ -425,14 +421,45 @@ export default function DesignWorkspace({
             STYLEVERSE DESIGN LAB
           </span>
 
-          <h2>Create your look</h2>
+          <h2>
+            {isEditMode
+              ? 'Edit your look'
+              : 'Create your look'}
+          </h2>
 
           <p>
             Bring your fashion ideas to life.
-            Customize every detail and watch
-            your creation appear in 3D.
+            Customize every detail and watch your
+            creation appear in 3D.
           </p>
         </div>
+
+        {/* EDIT MODE INDICATOR */}
+
+        {isEditMode && (
+          <div
+            className="preview-note"
+            role="status"
+          >
+            <h3>
+              Editing Design #{editingDesignId}
+            </h3>
+
+            <p>
+              You are editing an existing saved design.
+              Changes will be saved to the same design ID.
+            </p>
+
+            <button
+              type="button"
+              className="reset-button"
+              onClick={handleExitEditMode}
+              disabled={isBusy}
+            >
+              Exit Edit Mode
+            </button>
+          </div>
+        )}
 
         {/* ==================================
             01 — GARMENT SELECTION
@@ -455,8 +482,7 @@ export default function DesignWorkspace({
             aria-labelledby="garment-label"
           >
             {garmentOptions.map((option) => {
-              const selected =
-                garment === option.name
+              const selected = garment === option.name
 
               return (
                 <button
@@ -508,8 +534,7 @@ export default function DesignWorkspace({
             >
               {colorPresets.map((preset) => {
                 const selected =
-                  color.toLowerCase() ===
-                  preset.value
+                  color.toLowerCase() === preset.value
 
                 return (
                   <button
@@ -519,8 +544,7 @@ export default function DesignWorkspace({
                       selected ? 'selected' : ''
                     }`}
                     style={{
-                      backgroundColor:
-                        preset.value,
+                      backgroundColor: preset.value,
                     }}
                     onClick={() => {
                       setColor(preset.value)
@@ -580,8 +604,7 @@ export default function DesignWorkspace({
             aria-labelledby="fabric-label"
           >
             {fabricOptions.map((option) => {
-              const selected =
-                fabric === option.name
+              const selected = fabric === option.name
 
               return (
                 <button
@@ -610,7 +633,56 @@ export default function DesignWorkspace({
         </div>
 
         {/* ==================================
-            04 — GARMENT SIZE
+            04 — FABRIC PATTERN
+        ================================== */}
+
+        <div className="studio-field-group">
+          <div className="studio-field-heading">
+            <label id="pattern-label">
+              Choose your fabric pattern
+            </label>
+
+            <span className="studio-field-step">
+              04
+            </span>
+          </div>
+
+          <div
+            className="customization-option-grid"
+            role="group"
+            aria-labelledby="pattern-label"
+          >
+            {patternOptions.map((option) => {
+              const selected = pattern === option
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={`customization-option ${
+                    selected ? 'active' : ''
+                  }`}
+                  onClick={() => {
+                    setPattern(option)
+                    clearFeedback()
+                  }}
+                  aria-pressed={selected}
+                >
+                  {option}
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="garment-size-hint">
+            Selected pattern:{' '}
+            <strong>{pattern}</strong>.
+            Your 3D preview updates instantly.
+          </p>
+        </div>
+
+        {/* ==================================
+            05 — GARMENT SIZE
         ================================== */}
 
         <div className="studio-field-group">
@@ -620,7 +692,7 @@ export default function DesignWorkspace({
             </label>
 
             <span className="studio-field-step">
-              04
+              05
             </span>
           </div>
 
@@ -660,7 +732,7 @@ export default function DesignWorkspace({
         </div>
 
         {/* ==================================
-            05 — SLEEVE LENGTH
+            06 — SLEEVE LENGTH
         ================================== */}
 
         {hasSleeves && (
@@ -671,7 +743,7 @@ export default function DesignWorkspace({
               </label>
 
               <span className="studio-field-step">
-                05
+                06
               </span>
             </div>
 
@@ -708,7 +780,7 @@ export default function DesignWorkspace({
         )}
 
         {/* ==================================
-            06 — GARMENT FIT
+            07 — GARMENT FIT
         ================================== */}
 
         <div className="studio-field-group">
@@ -718,7 +790,7 @@ export default function DesignWorkspace({
             </label>
 
             <span className="studio-field-step">
-              06
+              07
             </span>
           </div>
 
@@ -751,7 +823,7 @@ export default function DesignWorkspace({
         </div>
 
         {/* ==================================
-            07 — DESIGN DESCRIPTION
+            08 — DESIGN DESCRIPTION
         ================================== */}
 
         <div className="studio-field-group">
@@ -761,7 +833,7 @@ export default function DesignWorkspace({
             </label>
 
             <span className="studio-field-step">
-              07
+              08
             </span>
           </div>
 
@@ -840,22 +912,29 @@ export default function DesignWorkspace({
           <button
             type="button"
             className="primary-button"
-            onClick={handleCreateDesign}
+            onClick={handleSaveDesign}
             disabled={
               !trimmedDescription || isBusy
             }
           >
             {isCreating
-              ? 'Saving your design...'
-              : 'Create & Save Design'}
+              ? isEditMode
+                ? 'Updating your design...'
+                : 'Saving your design...'
+              : isEditMode
+                ? `Update Existing Design #${editingDesignId}`
+                : 'Create & Save Design'}
           </button>
 
           <button
             type="button"
             className="reset-button"
             onClick={handleReset}
+            disabled={isBusy}
           >
-            Reset Design
+            {isEditMode
+              ? 'Cancel Editing & Reset'
+              : 'Reset Design'}
           </button>
         </div>
 
@@ -912,13 +991,18 @@ export default function DesignWorkspace({
             size={size}
             sleeveLength={sleeveLength}
             fit={fit}
+            pattern={pattern}
+            onPatternChange={(nextPattern) => {
+              setPattern(nextPattern)
+              clearFeedback()
+            }}
           />
 
           <div className="preview-design-summary">
             <h3>{garment}</h3>
 
             <p>
-              {fabric} Collection
+              {fabric} · {pattern} Collection
             </p>
 
             <span className="preview-color-chip">
@@ -941,10 +1025,23 @@ export default function DesignWorkspace({
               Fit: <strong>{fit}</strong>
             </p>
 
+            <p className="garment-preview-size">
+              Pattern: <strong>{pattern}</strong>
+            </p>
+
             {hasSleeves && (
               <p className="garment-preview-size">
                 Sleeves:{' '}
                 <strong>{sleeveLength}</strong>
+              </p>
+            )}
+
+            {isEditMode && (
+              <p className="garment-preview-size">
+                Editing:{' '}
+                <strong>
+                  Design #{editingDesignId}
+                </strong>
               </p>
             )}
           </div>
@@ -970,6 +1067,11 @@ export default function DesignWorkspace({
           <div className="design-detail-row">
             <span>Fabric</span>
             <strong>{fabric}</strong>
+          </div>
+
+          <div className="design-detail-row">
+            <span>Pattern</span>
+            <strong>{pattern}</strong>
           </div>
 
           <div className="design-detail-row">
@@ -1020,7 +1122,7 @@ export default function DesignWorkspace({
         </div>
 
         {/* ==================================
-            SAVE CONFIRMATION
+            SAVE / UPDATE CONFIRMATION
         ================================== */}
 
         {design && (
@@ -1029,12 +1131,15 @@ export default function DesignWorkspace({
             role="status"
           >
             <h3>
-              Design Saved Successfully!
+              {lastSavedAction === 'updated'
+                ? 'Design Updated Successfully!'
+                : 'Design Saved Successfully!'}
             </h3>
 
             <p>
-              Your fashion design and all
-              customizations were saved to SQLite.
+              {lastSavedAction === 'updated'
+                ? 'Your changes have been saved to the original design in SQLite.'
+                : 'Your new fashion design and all customizations have been saved to SQLite.'}
             </p>
 
             <p>
@@ -1045,6 +1150,11 @@ export default function DesignWorkspace({
             <p>
               <strong>Fabric:</strong>{' '}
               {design.fabric}
+            </p>
+
+            <p>
+              <strong>Pattern:</strong>{' '}
+              {design.pattern}
             </p>
 
             <p>

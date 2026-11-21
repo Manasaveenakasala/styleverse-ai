@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="StyleVerse AI API",
     description="Backend API for StyleVerse AI 3D Fashion Designer",
-    version="1.2.0",
+    version="1.4.0",
     lifespan=lifespan,
 )
 
@@ -56,7 +56,12 @@ app.add_middleware(
 # ==========================================
 
 GarmentSize = Literal[
-    "XS", "S", "M", "L", "XL", "XXL"
+    "XS",
+    "S",
+    "M",
+    "L",
+    "XL",
+    "XXL",
 ]
 
 SleeveLength = Literal[
@@ -73,6 +78,14 @@ GarmentFit = Literal[
     "Oversized",
 ]
 
+FabricPattern = Literal[
+    "Solid",
+    "Stripes",
+    "Floral",
+    "Plaid",
+    "Polka Dots",
+]
+
 
 # ==========================================
 # DESIGN REQUEST MODEL
@@ -80,7 +93,11 @@ GarmentFit = Literal[
 
 class DesignCreate(BaseModel):
     garment: Literal[
-        "Dress", "Jacket", "Shirt", "Skirt", "Pants"
+        "Dress",
+        "Jacket",
+        "Shirt",
+        "Skirt",
+        "Pants",
     ]
 
     color: str = Field(
@@ -88,7 +105,10 @@ class DesignCreate(BaseModel):
     )
 
     fabric: Literal[
-        "Cotton", "Silk", "Denim", "Leather"
+        "Cotton",
+        "Silk",
+        "Denim",
+        "Leather",
     ]
 
     description: str = Field(
@@ -96,10 +116,22 @@ class DesignCreate(BaseModel):
         max_length=1000,
     )
 
-    # Defaults keep older frontend requests valid.
     size: GarmentSize = "M"
     sleeve_length: SleeveLength = "Short"
     fit: GarmentFit = "Regular"
+    pattern: FabricPattern = "Solid"
+
+
+# ==========================================
+# UPDATE DESIGN REQUEST MODEL
+# ==========================================
+
+# PUT requires the same design fields as POST.
+# Reusing the model ensures both endpoints
+# validate the same customization options.
+
+class DesignUpdate(DesignCreate):
+    pass
 
 
 # ==========================================
@@ -141,7 +173,9 @@ class AIDesignSuggestion(BaseModel):
         "Leather",
     ]
 
-    description: str = Field(min_length=1)
+    description: str = Field(
+        min_length=1
+    )
 
 
 class AIDesignResponse(BaseModel):
@@ -162,6 +196,7 @@ DESIGN_COLUMNS = """
     size,
     sleeve_length,
     fit,
+    pattern,
     created_at,
     is_favorite
 """
@@ -198,9 +233,10 @@ def create_design(design: DesignCreate):
                     description,
                     size,
                     sleeve_length,
-                    fit
+                    fit,
+                    pattern
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     design.garment,
@@ -210,6 +246,7 @@ def create_design(design: DesignCreate):
                     design.size,
                     design.sleeve_length,
                     design.fit,
+                    design.pattern,
                 ),
             )
 
@@ -266,6 +303,112 @@ def get_designs():
         raise HTTPException(
             status_code=500,
             detail="Unable to retrieve designs",
+        ) from exc
+
+
+# ==========================================
+# UPDATE EXISTING DESIGN
+# PUT /designs/{design_id}
+# SPRINT 9 — TASK 1
+# ==========================================
+
+@app.put("/designs/{design_id}")
+def update_design(
+    design_id: int,
+    design: DesignUpdate,
+):
+    """
+    Update an existing saved design.
+
+    This modifies the same SQLite row.
+
+    Preserves:
+    - Design ID
+    - Original creation timestamp
+    - Favorite status
+
+    Updates:
+    - Garment
+    - Color
+    - Fabric
+    - Description
+    - Size
+    - Sleeve length
+    - Fit
+    - Fabric pattern
+    """
+
+    try:
+        with get_connection() as connection:
+
+            # Check whether the design exists.
+            existing_design = connection.execute(
+                """
+                SELECT id
+                FROM designs
+                WHERE id = ?
+                """,
+                (design_id,),
+            ).fetchone()
+
+            if existing_design is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Design not found",
+                )
+
+            # Update only customizable fields.
+            # ID, created_at, and is_favorite
+            # are deliberately excluded.
+
+            connection.execute(
+                """
+                UPDATE designs
+                SET
+                    garment = ?,
+                    color = ?,
+                    fabric = ?,
+                    description = ?,
+                    size = ?,
+                    sleeve_length = ?,
+                    fit = ?,
+                    pattern = ?
+                WHERE id = ?
+                """,
+                (
+                    design.garment,
+                    design.color,
+                    design.fabric,
+                    design.description,
+                    design.size,
+                    design.sleeve_length,
+                    design.fit,
+                    design.pattern,
+                    design_id,
+                ),
+            )
+
+            # Retrieve the updated record.
+            updated_design = connection.execute(
+                f"""
+                SELECT {DESIGN_COLUMNS}
+                FROM designs
+                WHERE id = ?
+                """,
+                (design_id,),
+            ).fetchone()
+
+            connection.commit()
+
+        return {
+            "message": "Design updated successfully",
+            "design": dict(updated_design),
+        }
+
+    except sqlite3.Error as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to update design",
         ) from exc
 
 

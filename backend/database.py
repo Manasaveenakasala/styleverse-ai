@@ -50,6 +50,7 @@ def initialize_database():
     - size
     - sleeve_length
     - fit
+    - pattern
     """
 
     with get_connection() as connection:
@@ -71,7 +72,8 @@ def initialize_database():
                 is_favorite INTEGER NOT NULL DEFAULT 0,
                 size TEXT NOT NULL DEFAULT 'M',
                 sleeve_length TEXT NOT NULL DEFAULT 'Short',
-                fit TEXT NOT NULL DEFAULT 'Regular'
+                fit TEXT NOT NULL DEFAULT 'Regular',
+                pattern TEXT NOT NULL DEFAULT 'Solid'
             )
             """
         )
@@ -105,6 +107,9 @@ def initialize_database():
             ),
             "fit": (
                 "TEXT NOT NULL DEFAULT 'Regular'"
+            ),
+            "pattern": (
+                "TEXT NOT NULL DEFAULT 'Solid'"
             ),
         }
 

@@ -1,18 +1,16 @@
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   createDesign,
   getSavedDesigns,
   deleteDesign,
   updateDesignFavorite,
+  getDesignVersions,
+  restoreDesignVersion,
   type SavedDesign,
   type DesignPayload,
+  type DesignVersion,
 } from "../services/api";
 
 import { exportDesignPDF } from "../utils/exportDesignPDF";
@@ -38,9 +36,28 @@ type Feedback = {
   message: string;
 } | null;
 
-// ==========================================
-// CLIPBOARD HELPER
-// ==========================================
+const VERSION_FIELDS: {
+  key: keyof DesignPayload;
+  label: string;
+}[] = [
+  { key: "garment", label: "Garment" },
+  { key: "color", label: "Color" },
+  { key: "fabric", label: "Fabric" },
+  { key: "pattern", label: "Pattern" },
+  { key: "size", label: "Size" },
+  { key: "sleeve_length", label: "Sleeves" },
+  { key: "fit", label: "Fit" },
+  { key: "description", label: "Description" },
+];
+
+function getErrorMessage(
+  error: unknown,
+  fallback: string
+): string {
+  return error instanceof Error
+    ? error.message
+    : fallback;
+}
 
 async function copyDesignText(text: string) {
   if (navigator.clipboard?.writeText) {
@@ -48,16 +65,14 @@ async function copyDesignText(text: string) {
       await navigator.clipboard.writeText(text);
       return;
     } catch {
-      // Use the fallback below.
+      // Use fallback.
     }
   }
 
   const textarea = document.createElement("textarea");
-
   textarea.value = text;
   textarea.style.position = "fixed";
   textarea.style.opacity = "0";
-
   document.body.appendChild(textarea);
 
   try {
@@ -72,35 +87,18 @@ async function copyDesignText(text: string) {
   }
 }
 
-// ==========================================
-// ERROR HELPER
-// ==========================================
-
-function getErrorMessage(
-  error: unknown,
-  fallback: string
-) {
-  return error instanceof Error
-    ? error.message
-    : fallback;
-}
-
-// ==========================================
-// SAVED DESIGNS COMPONENT
-// ==========================================
-
 export default function SavedDesigns({
   refreshKey,
   onLoadDesign,
 }: SavedDesignsProps) {
-  const [designs, setDesigns] =
-    useState<SavedDesign[]>([]);
+  // ==========================================
+  // SAVED DESIGNS STATE
+  // ==========================================
 
-  const [isLoading, setIsLoading] =
-    useState(true);
-
-  const [retryKey, setRetryKey] =
-    useState(0);
+  const [designs, setDesigns] = useState<SavedDesign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
+  const [loadError, setLoadError] = useState("");
 
   const [deletingId, setDeletingId] =
     useState<number | null>(null);
@@ -108,15 +106,13 @@ export default function SavedDesigns({
   const [updatingFavoriteId, setUpdatingFavoriteId] =
     useState<number | null>(null);
 
-  // Sprint 8 — Duplicate design state
   const [duplicatingId, setDuplicatingId] =
     useState<number | null>(null);
 
   const [filter, setFilter] =
     useState<DesignFilter>("all");
 
-  const [searchQuery, setSearchQuery] =
-    useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [garmentFilter, setGarmentFilter] =
     useState<GarmentFilter>("all");
@@ -127,49 +123,43 @@ export default function SavedDesigns({
   const [feedback, setFeedback] =
     useState<Feedback>(null);
 
-  const [loadError, setLoadError] =
+  // ==========================================
+  // VERSION HISTORY STATE
+  // ==========================================
+
+  const [historyDesignId, setHistoryDesignId] =
+    useState<number | null>(null);
+
+  const [historyVersions, setHistoryVersions] =
+    useState<DesignVersion[]>([]);
+
+  const [historyLoading, setHistoryLoading] =
+    useState(false);
+
+  const [historyError, setHistoryError] =
     useState("");
+
+  const [restoringVersion, setRestoringVersion] =
+    useState<number | null>(null);
+
+  // ==========================================
+  // SHARE STATE
+  // ==========================================
 
   const [shareDesign, setShareDesign] =
     useState<SavedDesign | null>(null);
 
-  const [shareText, setShareText] =
-    useState("");
+  const [shareText, setShareText] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
 
-  const [isSharing, setIsSharing] =
-    useState(false);
+  const showSuccess = useCallback((message: string) => {
+    setFeedback({ type: "success", message });
+  }, []);
 
-  const [isCopying, setIsCopying] =
-    useState(false);
-
-  const feedbackRef =
-    useRef<HTMLDivElement>(null);
-
-  const dialogRef =
-    useRef<HTMLDivElement>(null);
-
-  const closeButtonRef =
-    useRef<HTMLButtonElement>(null);
-
-  const showSuccess = useCallback(
-    (message: string) => {
-      setFeedback({
-        type: "success",
-        message,
-      });
-    },
-    []
-  );
-
-  const showError = useCallback(
-    (message: string) => {
-      setFeedback({
-        type: "error",
-        message,
-      });
-    },
-    []
-  );
+  const showError = useCallback((message: string) => {
+    setFeedback({ type: "error", message });
+  }, []);
 
   // ==========================================
   // LOAD SAVED DESIGNS
@@ -185,18 +175,18 @@ export default function SavedDesigns({
       try {
         const result = await getSavedDesigns();
 
-        if (!active) return;
-
-        setDesigns(result);
+        if (active) {
+          setDesigns(result);
+        }
       } catch (error) {
-        if (!active) return;
-
-        setLoadError(
-          getErrorMessage(
-            error,
-            "Unable to load saved designs."
-          )
-        );
+        if (active) {
+          setLoadError(
+            getErrorMessage(
+              error,
+              "Unable to load saved designs."
+            )
+          );
+        }
       } finally {
         if (active) {
           setIsLoading(false);
@@ -212,132 +202,102 @@ export default function SavedDesigns({
   }, [refreshKey, retryKey]);
 
   // ==========================================
-  // SHARE DIALOG KEYBOARD HANDLING
+  // VERSION HISTORY
   // ==========================================
 
-  useEffect(() => {
-    if (!shareDesign) return;
-
-    const previouslyFocused =
-      document.activeElement;
-
-    closeButtonRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        if (!isSharing && !isCopying) {
-          setShareDesign(null);
-        }
-        return;
-      }
-
-      if (event.key !== "Tab") return;
-
-      const buttons =
-        dialogRef.current?.querySelectorAll<
-          HTMLButtonElement
-        >('button:not(:disabled)');
-
-      if (!buttons?.length) return;
-
-      const first = buttons[0];
-      const last = buttons[buttons.length - 1];
-
-      if (
-        event.shiftKey &&
-        document.activeElement === first
-      ) {
-        event.preventDefault();
-        last.focus();
-      } else if (
-        !event.shiftKey &&
-        document.activeElement === last
-      ) {
-        event.preventDefault();
-        first.focus();
-      }
+  async function handleViewHistory(designId: number) {
+    if (historyDesignId === designId) {
+      setHistoryDesignId(null);
+      setHistoryVersions([]);
+      setHistoryError("");
+      return;
     }
 
-    document.addEventListener(
-      "keydown",
-      handleKeyDown
+    setHistoryDesignId(designId);
+    setHistoryVersions([]);
+    setHistoryError("");
+    setHistoryLoading(true);
+
+    try {
+      const result = await getDesignVersions(designId);
+      setHistoryVersions(result.versions);
+    } catch (error) {
+      setHistoryError(
+        getErrorMessage(
+          error,
+          "Unable to load version history."
+        )
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  // ==========================================
+  // RESTORE VERSION
+  // ==========================================
+
+  async function handleRestoreVersion(
+    designId: number,
+    versionNumber: number
+  ) {
+    if (restoringVersion !== null) return;
+
+    const confirmed = window.confirm(
+      `Restore Design #${designId} to Version ${versionNumber}?\n\n` +
+        "The current design will be updated, and its history will be preserved."
     );
 
-    return () => {
-      document.removeEventListener(
-        "keydown",
-        handleKeyDown
+    if (!confirmed) return;
+
+    setRestoringVersion(versionNumber);
+    setHistoryError("");
+    setFeedback(null);
+
+    try {
+      const result = await restoreDesignVersion(
+        designId,
+        versionNumber
       );
 
-      if (
-        previouslyFocused instanceof HTMLElement
-      ) {
-        previouslyFocused.focus();
-      }
-    };
-  }, [shareDesign, isSharing, isCopying]);
-
-  // ==========================================
-  // FILTER AND SORT DESIGNS
-  // ==========================================
-
-  const favoriteCount = designs.filter(
-    (design) => Boolean(design.is_favorite)
-  ).length;
-
-  const filteredDesigns = designs
-    .filter(
-      (design) =>
-        filter === "all" ||
-        Boolean(design.is_favorite)
-    )
-    .filter(
-      (design) =>
-        garmentFilter === "all" ||
-        design.garment === garmentFilter
-    )
-    .filter((design) => {
-      const query =
-        searchQuery.trim().toLowerCase();
-
-      if (!query) return true;
-
-      return [
-        design.garment,
-        design.fabric,
-        design.pattern ?? "Solid",
-        design.size,
-        design.sleeve_length,
-        design.fit,
-        design.color,
-        design.description,
-      ].some((value) =>
-        value.toLowerCase().includes(query)
+      setDesigns((previous) =>
+        previous.map((design) =>
+          design.id === designId
+            ? result.design
+            : design
+        )
       );
-    })
-    .sort((a, b) => {
-      if (sortOption === "oldest") {
-        return a.id - b.id;
-      }
 
-      if (sortOption === "name") {
-        return (
-          a.garment.localeCompare(b.garment) ||
-          b.id - a.id
-        );
-      }
+      const updatedHistory =
+        await getDesignVersions(designId);
 
-      return b.id - a.id;
-    });
+      setHistoryVersions(updatedHistory.versions);
 
-  const isUpdating =
-    deletingId !== null ||
-    updatingFavoriteId !== null ||
-    duplicatingId !== null;
+      showSuccess(
+        `Design #${designId} restored from Version ${versionNumber}.`
+      );
+    } catch (error) {
+      const message = getErrorMessage(
+        error,
+        "Unable to restore design."
+      );
+
+      setHistoryError(message);
+      showError(message);
+    } finally {
+      setRestoringVersion(null);
+    }
+  }
 
   // ==========================================
   // DUPLICATE DESIGN
   // ==========================================
+
+  const isUpdating =
+    deletingId !== null ||
+    updatingFavoriteId !== null ||
+    duplicatingId !== null ||
+    restoringVersion !== null;
 
   async function handleDuplicateDesign(
     design: SavedDesign
@@ -348,46 +308,31 @@ export default function SavedDesigns({
     setFeedback(null);
 
     try {
-      // Copy all customizable fields.
-      // Do not copy the original ID, timestamp,
-      // or favorite status.
-
-      const duplicatePayload: DesignPayload = {
+      const payload: DesignPayload = {
         garment: design.garment,
         color: design.color,
         fabric: design.fabric,
         description: design.description,
         size: design.size ?? "M",
-        sleeve_length:
-          design.sleeve_length ?? "Short",
+        sleeve_length: design.sleeve_length ?? "Short",
         fit: design.fit ?? "Regular",
         pattern: design.pattern ?? "Solid",
       };
 
-      // Existing POST /designs creates a new row.
-      const response = await createDesign(
-        duplicatePayload
-      );
+      const response = await createDesign(payload);
 
-      const duplicatedDesign = response.design;
-
-      // Add the new design to the collection.
       setDesigns((previous) => [
-        duplicatedDesign,
-        ...previous.filter(
-          (item) =>
-            item.id !== duplicatedDesign.id
-        ),
+        response.design,
+        ...previous,
       ]);
 
-      // Show all designs so the new copy is visible.
       setFilter("all");
       setSearchQuery("");
       setGarmentFilter("all");
       setSortOption("newest");
 
       showSuccess(
-        `Design #${design.id} duplicated successfully as Design #${duplicatedDesign.id}.`
+        `Design #${design.id} duplicated as Design #${response.design.id}.`
       );
     } catch (error) {
       showError(
@@ -414,14 +359,10 @@ export default function SavedDesigns({
     setFeedback(null);
 
     try {
-      const nextFavorite =
-        !design.is_favorite;
-
-      const response =
-        await updateDesignFavorite(
-          design.id,
-          nextFavorite
-        );
+      const response = await updateDesignFavorite(
+        design.id,
+        !design.is_favorite
+      );
 
       setDesigns((previous) =>
         previous.map((item) =>
@@ -432,7 +373,7 @@ export default function SavedDesigns({
       );
 
       showSuccess(
-        nextFavorite
+        response.design.is_favorite
           ? "Design added to favorites."
           : "Design removed from favorites."
       );
@@ -477,9 +418,12 @@ export default function SavedDesigns({
         )
       );
 
-      showSuccess(
-        "Design deleted successfully."
-      );
+      if (historyDesignId === designId) {
+        setHistoryDesignId(null);
+        setHistoryVersions([]);
+      }
+
+      showSuccess("Design deleted successfully.");
     } catch (error) {
       showError(
         getErrorMessage(
@@ -496,9 +440,7 @@ export default function SavedDesigns({
   // LOAD DESIGN INTO STUDIO
   // ==========================================
 
-  function handleLoadDesign(
-    design: SavedDesign
-  ) {
+  function handleLoadDesign(design: SavedDesign) {
     onLoadDesign(design);
 
     showSuccess(
@@ -510,46 +452,17 @@ export default function SavedDesigns({
   // JSON EXPORT
   // ==========================================
 
-  function handleDownloadJSON(
-    design: SavedDesign
-  ) {
+  function handleDownloadJSON(design: SavedDesign) {
     try {
-      const exportData = {
-        id: design.id,
-        garment: design.garment,
-        color: design.color,
-        fabric: design.fabric,
-        pattern: design.pattern ?? "Solid",
-        size: design.size,
-        sleeve_length: design.sleeve_length,
-        fit: design.fit,
-        description: design.description,
-        created_at: design.created_at,
-        is_favorite:
-          Boolean(design.is_favorite),
-      };
-
       const blob = new Blob(
-        [
-          JSON.stringify(
-            exportData,
-            null,
-            2
-          ),
-        ],
-        {
-          type: "application/json",
-        }
+        [JSON.stringify(design, null, 2)],
+        { type: "application/json" }
       );
 
-      const url =
-        URL.createObjectURL(blob);
-
-      const link =
-        document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
 
       link.href = url;
-
       link.download =
         `styleverse-${design.garment.toLowerCase()}-${design.id}.json`;
 
@@ -561,9 +474,7 @@ export default function SavedDesigns({
         URL.revokeObjectURL(url);
       }, 1000);
 
-      showSuccess(
-        "JSON download started."
-      );
+      showSuccess("JSON download started.");
     } catch (error) {
       showError(
         getErrorMessage(
@@ -578,15 +489,10 @@ export default function SavedDesigns({
   // PDF EXPORT
   // ==========================================
 
-  function handleDownloadPDF(
-    design: SavedDesign
-  ) {
+  function handleDownloadPDF(design: SavedDesign) {
     try {
       exportDesignPDF(design);
-
-      showSuccess(
-        "PDF download started."
-      );
+      showSuccess("PDF download started.");
     } catch (error) {
       showError(
         getErrorMessage(
@@ -601,15 +507,13 @@ export default function SavedDesigns({
   // SHARE DESIGN
   // ==========================================
 
-  function handleShareDesign(
-    design: SavedDesign
-  ) {
+  function handleShareDesign(design: SavedDesign) {
     const text = [
       `StyleVerse AI - ${design.garment} #${design.id}`,
       `Garment: ${design.garment}`,
       `Fabric: ${design.fabric}`,
-      `Pattern: ${design.pattern ?? "Solid"}`,
-      `Color: ${design.color.toUpperCase()}`,
+      `Pattern: ${design.pattern}`,
+      `Color: ${design.color}`,
       `Size: ${design.size}`,
       `Sleeve Length: ${design.sleeve_length}`,
       `Fit: ${design.fit}`,
@@ -623,11 +527,7 @@ export default function SavedDesigns({
   }
 
   async function handleNativeShare() {
-    if (
-      !shareDesign ||
-      typeof navigator.share !== "function" ||
-      isSharing
-    ) {
+    if (!shareDesign || !navigator.share || isSharing) {
       return;
     }
 
@@ -635,16 +535,12 @@ export default function SavedDesigns({
 
     try {
       await navigator.share({
-        title:
-          `StyleVerse AI - ${shareDesign.garment}`,
+        title: `StyleVerse AI - ${shareDesign.garment}`,
         text: shareText,
       });
 
       setShareDesign(null);
-
-      showSuccess(
-        "Design shared successfully."
-      );
+      showSuccess("Design shared successfully.");
     } catch (error) {
       if (
         error instanceof DOMException &&
@@ -653,9 +549,7 @@ export default function SavedDesigns({
         return;
       }
 
-      showError(
-        "Native sharing failed. Try Copy Details instead."
-      );
+      showError("Sharing failed. Try Copy Details.");
     } finally {
       setIsSharing(false);
     }
@@ -667,27 +561,68 @@ export default function SavedDesigns({
     setIsCopying(true);
 
     try {
-      await copyDesignText(
-        shareText
-      );
-
+      await copyDesignText(shareText);
       setShareDesign(null);
 
-      showSuccess(
-        "Design details copied to your clipboard."
-      );
+      showSuccess("Design details copied.");
     } catch {
-      showError(
-        "Copy failed. Select the text in the dialog and copy it manually."
-      );
+      showError("Unable to copy design details.");
     } finally {
       setIsCopying(false);
     }
   }
 
   // ==========================================
-  // CLEAR FILTERS
+  // FILTERING AND SORTING
   // ==========================================
+
+  const favoriteCount = designs.filter(
+    (design) => Boolean(design.is_favorite)
+  ).length;
+
+  const filteredDesigns = designs
+    .filter(
+      (design) =>
+        filter === "all" ||
+        Boolean(design.is_favorite)
+    )
+    .filter(
+      (design) =>
+        garmentFilter === "all" ||
+        design.garment === garmentFilter
+    )
+    .filter((design) => {
+      const query = searchQuery.trim().toLowerCase();
+
+      if (!query) return true;
+
+      return [
+        design.garment,
+        design.fabric,
+        design.pattern,
+        design.size,
+        design.sleeve_length,
+        design.fit,
+        design.color,
+        design.description,
+      ].some((value) =>
+        value.toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      if (sortOption === "oldest") {
+        return a.id - b.id;
+      }
+
+      if (sortOption === "name") {
+        return (
+          a.garment.localeCompare(b.garment) ||
+          b.id - a.id
+        );
+      }
+
+      return b.id - a.id;
+    });
 
   function handleClearFilters() {
     setFilter("all");
@@ -697,13 +632,145 @@ export default function SavedDesigns({
   }
 
   // ==========================================
-  // RENDER
+  // VERSION HISTORY RENDER HELPER
+  // ==========================================
+
+  function renderVersionHistory(design: SavedDesign) {
+    if (historyDesignId !== design.id) {
+      return null;
+    }
+
+    return (
+      <div
+        className="design-version-history"
+        style={{
+          marginTop: "16px",
+          padding: "16px",
+          border: "1px solid #ddd",
+          borderRadius: "12px",
+        }}
+      >
+        <h4>Version History</h4>
+
+        <p>
+          {historyVersions.length} saved version(s)
+        </p>
+
+        {historyLoading && (
+          <p role="status">Loading version history...</p>
+        )}
+
+        {historyError && (
+          <p className="design-error" role="alert">
+            {historyError}
+          </p>
+        )}
+
+        {!historyLoading &&
+          !historyError &&
+          historyVersions.length === 0 && (
+            <p>No versions available.</p>
+          )}
+
+        {!historyLoading &&
+          historyVersions.map((version, index) => {
+            const previousVersion =
+              historyVersions[index + 1];
+
+            const isLatest = index === 0;
+
+            return (
+              <div
+                key={version.id}
+                className="design-version-card"
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: "10px",
+                  padding: "12px",
+                  marginBottom: "12px",
+                }}
+              >
+                <h5>
+                  Version {version.version_number}
+                  {isLatest ? " (Latest)" : ""}
+                </h5>
+
+                <p>
+                  <strong>Saved:</strong>{" "}
+                  {version.created_at}
+                </p>
+
+                <div
+                  style={{
+                    width: "45px",
+                    height: "45px",
+                    backgroundColor: version.color,
+                    borderRadius: "8px",
+                    border: "1px solid #ccc",
+                  }}
+                  role="img"
+                  aria-label={`Version color ${version.color}`}
+                />
+
+                {VERSION_FIELDS.map((field) => {
+                  const value = version[field.key];
+
+                  const changed =
+                    previousVersion !== undefined &&
+                    value !== previousVersion[field.key];
+
+                  return (
+                    <p key={field.key}>
+                      <strong>{field.label}:</strong>{" "}
+                      {value}
+
+                      {changed && (
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          (Changed from{" "}
+                          {previousVersion[field.key]})
+                        </span>
+                      )}
+                    </p>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={
+                    restoringVersion !== null ||
+                    isUpdating
+                  }
+                  onClick={() =>
+                    void handleRestoreVersion(
+                      design.id,
+                      version.version_number
+                    )
+                  }
+                >
+                  {restoringVersion ===
+                  version.version_number
+                    ? "Restoring..."
+                    : `Restore Version ${version.version_number}`}
+                </button>
+              </div>
+            );
+          })}
+      </div>
+    );
+  }
+
+  // ==========================================
+  // MAIN RENDER
   // ==========================================
 
   return (
     <section className="saved-designs">
-      {/* HEADER */}
-
       <div className="saved-designs-header">
         <span className="eyebrow">
           YOUR FASHION COLLECTION
@@ -712,15 +779,12 @@ export default function SavedDesigns({
         <h2>My Saved Designs</h2>
 
         <p>
-          Explore, duplicate, organize,
-          customize, export, and share
-          your creations.
+          Explore, duplicate, customize, restore,
+          export, and share your creations.
         </p>
       </div>
 
-      {/* ==================================
-          FILTERS
-      ================================== */}
+      {/* FILTER BUTTONS */}
 
       <div
         className="saved-design-filters"
@@ -730,16 +794,10 @@ export default function SavedDesigns({
         <button
           type="button"
           className={`filter-button ${
-            filter === "all"
-              ? "active"
-              : ""
+            filter === "all" ? "active" : ""
           }`}
-          aria-pressed={
-            filter === "all"
-          }
-          onClick={() =>
-            setFilter("all")
-          }
+          aria-pressed={filter === "all"}
+          onClick={() => setFilter("all")}
         >
           All Designs ({designs.length})
         </button>
@@ -747,33 +805,23 @@ export default function SavedDesigns({
         <button
           type="button"
           className={`filter-button ${
-            filter === "favorites"
-              ? "active"
-              : ""
+            filter === "favorites" ? "active" : ""
           }`}
-          aria-pressed={
-            filter === "favorites"
-          }
-          onClick={() =>
-            setFilter("favorites")
-          }
+          aria-pressed={filter === "favorites"}
+          onClick={() => setFilter("favorites")}
         >
           ♥ Favorites ({favoriteCount})
         </button>
       </div>
 
-      {/* ==================================
-          SEARCH AND SORT
-      ================================== */}
+      {/* SEARCH AND SORT */}
 
       <div className="design-search-controls">
         <input
           type="search"
           value={searchQuery}
           onChange={(event) =>
-            setSearchQuery(
-              event.target.value
-            )
+            setSearchQuery(event.target.value)
           }
           placeholder="Search designs..."
           aria-label="Search saved designs"
@@ -788,29 +836,12 @@ export default function SavedDesigns({
           }
           aria-label="Filter by garment"
         >
-          <option value="all">
-            All Garments
-          </option>
-
-          <option value="Dress">
-            Dresses
-          </option>
-
-          <option value="Jacket">
-            Jackets
-          </option>
-
-          <option value="Shirt">
-            Shirts
-          </option>
-
-          <option value="Skirt">
-            Skirts
-          </option>
-
-          <option value="Pants">
-            Pants
-          </option>
+          <option value="all">All Garments</option>
+          <option value="Dress">Dresses</option>
+          <option value="Jacket">Jackets</option>
+          <option value="Shirt">Shirts</option>
+          <option value="Skirt">Skirts</option>
+          <option value="Pants">Pants</option>
         </select>
 
         <select
@@ -822,14 +853,8 @@ export default function SavedDesigns({
           }
           aria-label="Sort saved designs"
         >
-          <option value="newest">
-            Newest First
-          </option>
-
-          <option value="oldest">
-            Oldest First
-          </option>
-
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
           <option value="name">
             Garment Name (A-Z)
           </option>
@@ -838,51 +863,36 @@ export default function SavedDesigns({
         <button
           type="button"
           className="filter-button"
-          onClick={
-            handleClearFilters
-          }
+          onClick={handleClearFilters}
         >
           Clear Filters
         </button>
       </div>
 
-      {/* ==================================
-          FEEDBACK
-      ================================== */}
+      {/* FEEDBACK */}
 
-      <div
-        ref={feedbackRef}
-        aria-live="polite"
-      >
-        {feedback && (
-          <div
-            className={`saved-feedback saved-feedback-${feedback.type}`}
-            role={
-              feedback.type === "error"
-                ? "alert"
-                : "status"
-            }
+      {feedback && (
+        <div
+          className={`saved-feedback saved-feedback-${feedback.type}`}
+          role={
+            feedback.type === "error"
+              ? "alert"
+              : "status"
+          }
+        >
+          <span>{feedback.message}</span>
+
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            aria-label="Dismiss notification"
           >
-            <span>
-              {feedback.message}
-            </span>
+            ×
+          </button>
+        </div>
+      )}
 
-            <button
-              type="button"
-              onClick={() =>
-                setFeedback(null)
-              }
-              aria-label="Dismiss notification"
-            >
-              ×
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ==================================
-          LOADING
-      ================================== */}
+      {/* LOADING */}
 
       {isLoading && (
         <div
@@ -893,34 +903,24 @@ export default function SavedDesigns({
             className="studio-spinner"
             aria-hidden="true"
           />
-
-          <span>
-            Loading your fashion collection...
-          </span>
+          Loading your fashion collection...
         </div>
       )}
 
-      {/* ==================================
-          LOAD ERROR
-      ================================== */}
+      {/* LOAD ERROR */}
 
       {!isLoading && loadError && (
         <div
           className="saved-design-error"
           role="alert"
         >
-          <p>
-            {loadError}
-          </p>
+          <p>{loadError}</p>
 
           <button
             type="button"
             className="filter-button"
             onClick={() =>
-              setRetryKey(
-                (previous) =>
-                  previous + 1
-              )
+              setRetryKey((previous) => previous + 1)
             }
           >
             Retry Loading
@@ -928,9 +928,7 @@ export default function SavedDesigns({
         </div>
       )}
 
-      {/* ==================================
-          RESULTS
-      ================================== */}
+      {/* RESULTS */}
 
       {!isLoading && !loadError && (
         <p className="saved-design-results">
@@ -939,21 +937,16 @@ export default function SavedDesigns({
         </p>
       )}
 
-      {/* ==================================
-          EMPTY STATES
-      ================================== */}
+      {/* EMPTY STATES */}
 
       {!isLoading &&
         !loadError &&
         designs.length === 0 && (
           <div className="saved-designs-empty">
-            <h3>
-              No saved designs yet
-            </h3>
-
+            <h3>No saved designs yet</h3>
             <p>
-              Create your first fashion design
-              in the studio above.
+              Create your first fashion design in
+              the studio above.
             </p>
           </div>
         )}
@@ -963,10 +956,7 @@ export default function SavedDesigns({
         designs.length > 0 &&
         filteredDesigns.length === 0 && (
           <div className="saved-designs-empty">
-            <h3>
-              No matching designs
-            </h3>
-
+            <h3>No matching designs</h3>
             <p>
               Try changing your search or filters.
             </p>
@@ -974,61 +964,37 @@ export default function SavedDesigns({
             <button
               type="button"
               className="filter-button"
-              onClick={
-                handleClearFilters
-              }
+              onClick={handleClearFilters}
             >
               Clear Filters
             </button>
           </div>
         )}
 
-      {/* ==================================
-          DESIGN CARDS
-      ================================== */}
+      {/* DESIGN CARDS */}
 
       {!isLoading &&
         !loadError &&
         filteredDesigns.length > 0 && (
           <div className="saved-designs-grid">
             {filteredDesigns.map((design) => {
-              const isFavorite =
-                Boolean(
-                  design.is_favorite
-                );
-
-              const isFavoriteUpdating =
-                updatingFavoriteId === design.id;
-
-              const isDeleting =
-                deletingId === design.id;
-
-              const isDuplicating =
-                duplicatingId === design.id;
+              const isFavorite = Boolean(
+                design.is_favorite
+              );
 
               return (
                 <article
                   key={design.id}
                   className="saved-design-card"
-                  aria-busy={
-                    isFavoriteUpdating ||
-                    isDeleting ||
-                    isDuplicating
-                  }
                 >
-                  {/* DESIGN COLOR */}
-
                   <div
                     className="saved-design-color"
                     style={{
-                      backgroundColor:
-                        design.color,
+                      backgroundColor: design.color,
                     }}
-                    aria-label={`Design color ${design.color}`}
                     role="img"
+                    aria-label={`Design color ${design.color}`}
                   />
-
-                  {/* DESIGN DETAILS */}
 
                   <div className="saved-design-info">
                     <h3>
@@ -1036,64 +1002,46 @@ export default function SavedDesigns({
                     </h3>
 
                     <p>
-                      <strong>
-                        Fabric:
-                      </strong>{" "}
+                      <strong>Fabric:</strong>{" "}
                       {design.fabric}
                     </p>
 
                     <p>
-                      <strong>
-                        Pattern:
-                      </strong>{" "}
-                      {design.pattern ?? "Solid"}
+                      <strong>Pattern:</strong>{" "}
+                      {design.pattern}
                     </p>
 
                     <p>
-                      <strong>
-                        Color:
-                      </strong>{" "}
+                      <strong>Color:</strong>{" "}
                       {design.color.toUpperCase()}
                     </p>
 
                     <p>
-                      <strong>
-                        Size:
-                      </strong>{" "}
+                      <strong>Size:</strong>{" "}
                       {design.size}
                     </p>
 
                     <p>
-                      <strong>
-                        Fit:
-                      </strong>{" "}
+                      <strong>Fit:</strong>{" "}
                       {design.fit}
                     </p>
 
-                    {(
-                      design.garment === "Dress" ||
-                      design.garment === "Shirt" ||
-                      design.garment === "Jacket"
+                    {["Dress", "Shirt", "Jacket"].includes(
+                      design.garment
                     ) && (
                       <p>
-                        <strong>
-                          Sleeves:
-                        </strong>{" "}
+                        <strong>Sleeves:</strong>{" "}
                         {design.sleeve_length}
                       </p>
                     )}
 
                     <p>
-                      <strong>
-                        Description:
-                      </strong>{" "}
+                      <strong>Description:</strong>{" "}
                       {design.description}
                     </p>
 
                     <p>
-                      <strong>
-                        Created:
-                      </strong>{" "}
+                      <strong>Created:</strong>{" "}
                       {design.created_at}
                     </p>
                   </div>
@@ -1101,8 +1049,6 @@ export default function SavedDesigns({
                   {/* ACTION BUTTONS */}
 
                   <div className="saved-design-actions">
-                    {/* FAVORITE */}
-
                     <button
                       type="button"
                       className={`favorite-button ${
@@ -1110,143 +1056,132 @@ export default function SavedDesigns({
                           ? "is-favorite"
                           : ""
                       }`}
-                      aria-pressed={
-                        isFavorite
-                      }
-                      disabled={
-                        isUpdating
-                      }
+                      aria-pressed={isFavorite}
+                      disabled={isUpdating}
                       onClick={() =>
                         void handleToggleFavorite(
                           design
                         )
                       }
                     >
-                      {isFavoriteUpdating
+                      {updatingFavoriteId === design.id
                         ? "Updating..."
                         : isFavorite
                           ? "♥ Favorited"
                           : "♡ Favorite"}
                     </button>
 
-                    {/* LOAD IN STUDIO */}
-
                     <button
                       type="button"
                       className="primary-button"
                       onClick={() =>
-                        handleLoadDesign(
-                          design
-                        )
+                        handleLoadDesign(design)
                       }
                     >
                       Load in Studio
                     </button>
 
-                    {/* DUPLICATE DESIGN */}
-
                     <button
                       type="button"
                       className="download-button"
-                      disabled={
-                        isUpdating
-                      }
+                      disabled={isUpdating}
                       onClick={() =>
                         void handleDuplicateDesign(
                           design
                         )
                       }
                     >
-                      {isDuplicating
+                      {duplicatingId === design.id
                         ? "Duplicating..."
                         : "⧉ Duplicate Design"}
                     </button>
 
-                    {/* JSON EXPORT */}
+                    {/* VERSION HISTORY BUTTON */}
+
+                    <button
+                      type="button"
+                      className="download-button"
+                      aria-expanded={
+                        historyDesignId === design.id
+                      }
+                      onClick={() =>
+                        void handleViewHistory(
+                          design.id
+                        )
+                      }
+                    >
+                      {historyDesignId === design.id
+                        ? "Hide Version History"
+                        : "View Version History"}
+                    </button>
 
                     <button
                       type="button"
                       className="download-button"
                       onClick={() =>
-                        handleDownloadJSON(
-                          design
-                        )
+                        handleDownloadJSON(design)
                       }
                     >
                       ↓ Download JSON
                     </button>
 
-                    {/* PDF EXPORT */}
-
                     <button
                       type="button"
                       className="download-button"
                       onClick={() =>
-                        handleDownloadPDF(
-                          design
-                        )
+                        handleDownloadPDF(design)
                       }
                     >
                       📄 Download PDF
                     </button>
 
-                    {/* SHARE */}
-
                     <button
                       type="button"
                       className="download-button"
                       onClick={() =>
-                        handleShareDesign(
-                          design
-                        )
+                        handleShareDesign(design)
                       }
                     >
                       ↗ Share Design
                     </button>
 
-                    {/* DELETE */}
-
                     <button
                       type="button"
                       className="delete-button"
-                      disabled={
-                        isUpdating
-                      }
+                      disabled={isUpdating}
                       onClick={() =>
                         void handleDeleteDesign(
                           design.id
                         )
                       }
                     >
-                      {isDeleting
+                      {deletingId === design.id
                         ? "Deleting..."
                         : "Delete Design"}
                     </button>
                   </div>
+
+                  {/* VERSION HISTORY PANEL */}
+
+                  {renderVersionHistory(design)}
                 </article>
               );
             })}
           </div>
         )}
 
-      {/* ==================================
-          SHARE DIALOG
-      ================================== */}
+      {/* SHARE DIALOG */}
 
       {shareDesign && (
         <div
           className="share-dialog-backdrop"
           onClick={() => {
-            if (
-              !isSharing &&
-              !isCopying
-            ) {
+            if (!isSharing && !isCopying) {
               setShareDesign(null);
             }
           }}
         >
           <div
-            ref={dialogRef}
             className="share-dialog"
             role="dialog"
             aria-modal="true"
@@ -1262,13 +1197,9 @@ export default function SavedDesigns({
               </h3>
 
               <button
-                ref={closeButtonRef}
                 type="button"
                 className="share-dialog-close"
-                disabled={
-                  isSharing ||
-                  isCopying
-                }
+                disabled={isSharing || isCopying}
                 onClick={() =>
                   setShareDesign(null)
                 }
@@ -1279,8 +1210,7 @@ export default function SavedDesigns({
             </div>
 
             <p>
-              Share your creation or
-              copy its details.
+              Share your creation or copy its details.
             </p>
 
             <textarea
@@ -1300,10 +1230,7 @@ export default function SavedDesigns({
                 <button
                   type="button"
                   className="primary-button"
-                  disabled={
-                    isSharing ||
-                    isCopying
-                  }
+                  disabled={isSharing || isCopying}
                   onClick={() =>
                     void handleNativeShare()
                   }
@@ -1317,10 +1244,7 @@ export default function SavedDesigns({
               <button
                 type="button"
                 className="download-button"
-                disabled={
-                  isSharing ||
-                  isCopying
-                }
+                disabled={isSharing || isCopying}
                 onClick={() =>
                   void handleCopyShareText()
                 }
@@ -1333,10 +1257,7 @@ export default function SavedDesigns({
               <button
                 type="button"
                 className="filter-button"
-                disabled={
-                  isSharing ||
-                  isCopying
-                }
+                disabled={isSharing || isCopying}
                 onClick={() =>
                   setShareDesign(null)
                 }
@@ -1344,15 +1265,6 @@ export default function SavedDesigns({
                 Close
               </button>
             </div>
-
-            {feedback?.type === "error" && (
-              <p
-                className="design-error"
-                role="alert"
-              >
-                {feedback.message}
-              </p>
-            )}
           </div>
         </div>
       )}

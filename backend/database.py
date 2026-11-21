@@ -32,6 +32,10 @@ def get_connection():
 
     connection.row_factory = sqlite3.Row
 
+    # Enforce relationships between designs
+    # and their version history.
+    connection.execute("PRAGMA foreign_keys = ON")
+
     return connection
 
 
@@ -41,16 +45,14 @@ def get_connection():
 
 def initialize_database():
     """
-    Create the designs table if it does not exist.
+    Initialize the StyleVerse AI database.
 
-    For existing databases, add any missing
-    columns without deleting saved designs.
+    Tables:
+    - designs
+    - design_versions
 
-    Advanced customizations:
-    - size
-    - sleeve_length
-    - fit
-    - pattern
+    Existing saved designs are preserved.
+    Missing columns are added automatically.
     """
 
     with get_connection() as connection:
@@ -131,6 +133,109 @@ def initialize_database():
                 )
 
         # --------------------------------------
+        # CREATE DESIGN VERSIONS TABLE
+        # --------------------------------------
+
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS design_versions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                design_id INTEGER NOT NULL,
+
+                version_number INTEGER NOT NULL,
+
+                garment TEXT NOT NULL,
+                color TEXT NOT NULL,
+                fabric TEXT NOT NULL,
+                description TEXT NOT NULL,
+
+                size TEXT NOT NULL DEFAULT 'M',
+                sleeve_length TEXT NOT NULL DEFAULT 'Short',
+                fit TEXT NOT NULL DEFAULT 'Regular',
+                pattern TEXT NOT NULL DEFAULT 'Solid',
+
+                created_at TEXT NOT NULL
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (design_id)
+                    REFERENCES designs(id)
+                    ON DELETE CASCADE,
+
+                UNIQUE (design_id, version_number)
+            )
+            """
+        )
+
+        # --------------------------------------
+        # CREATE INDEXES
+        # --------------------------------------
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+                idx_design_versions_design_id
+            ON design_versions(design_id)
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+                idx_design_versions_number
+            ON design_versions(
+                design_id,
+                version_number DESC
+            )
+            """
+        )
+
+        # --------------------------------------
+        # INITIAL VERSION FOR EXISTING DESIGNS
+        # --------------------------------------
+
+        # Existing designs have no historical
+        # snapshots yet. Save their current
+        # state as version 1 if no history exists.
+        #
+        # This does not reconstruct any edits
+        # that happened before version tracking.
+
+        connection.execute(
+            """
+            INSERT INTO design_versions (
+                design_id,
+                version_number,
+                garment,
+                color,
+                fabric,
+                description,
+                size,
+                sleeve_length,
+                fit,
+                pattern
+            )
+            SELECT
+                d.id,
+                1,
+                d.garment,
+                d.color,
+                d.fabric,
+                d.description,
+                d.size,
+                d.sleeve_length,
+                d.fit,
+                d.pattern
+            FROM designs AS d
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM design_versions AS v
+                WHERE v.design_id = d.id
+            )
+            """
+        )
+
+        # --------------------------------------
         # SAVE DATABASE CHANGES
         # --------------------------------------
 
@@ -138,6 +243,10 @@ def initialize_database():
 
     print(
         "StyleVerse AI database initialized successfully."
+    )
+
+    print(
+        "Design version history is ready."
     )
 
 

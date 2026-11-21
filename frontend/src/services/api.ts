@@ -46,7 +46,6 @@ export type GarmentFit =
   | 'Relaxed'
   | 'Oversized'
 
-// Sprint 8 — Fabric pattern customization
 export type FabricPattern =
   | 'Solid'
   | 'Stripes'
@@ -59,13 +58,9 @@ export type DesignPayload = {
   color: string
   fabric: string
   description: string
-
-  // Advanced garment customizations
   size: GarmentSize
   sleeve_length: SleeveLength
   fit: GarmentFit
-
-  // Fabric pattern saved to SQLite
   pattern: FabricPattern
 }
 
@@ -80,8 +75,76 @@ export type CreateDesignResponse = {
   design: SavedDesign
 }
 
+export type UpdateDesignResponse = {
+  message: string
+  design: SavedDesign
+  version_number?: number
+}
+
 export type SavedDesignsResponse = {
   designs: SavedDesign[]
+}
+
+// ==========================================
+// DESIGN VERSION HISTORY TYPES
+// SPRINT 9 — TASK 2
+// ==========================================
+
+export type DesignVersion = DesignPayload & {
+  id: number
+  design_id: number
+  version_number: number
+  created_at: string
+}
+
+export type DesignVersionsResponse = {
+  design_id: number
+  total_versions: number
+  versions: DesignVersion[]
+}
+
+export type DesignVersionResponse = {
+  design_id: number
+  version: DesignVersion
+}
+
+export type RestoreDesignVersionResponse = {
+  message: string
+  design: SavedDesign
+  restored_from_version: number
+  version_number: number
+}
+
+// ==========================================
+// API ERROR HANDLING
+// ==========================================
+
+async function getApiErrorMessage(
+  response: Response,
+  fallbackMessage: string
+): Promise<string> {
+  if (response.status === 404) {
+    return 'Design or design version not found.'
+  }
+
+  if (response.status === 422) {
+    return 'Invalid request. Please check the design details.'
+  }
+
+  try {
+    const data = (await response.json()) as {
+      detail?: string
+    }
+
+    if (typeof data.detail === 'string') {
+      return data.detail
+    }
+  } catch {
+    // Use the fallback message when no JSON
+    // error response is available.
+  }
+
+  return `${fallbackMessage}: ${response.status}`
 }
 
 // ==========================================
@@ -102,7 +165,10 @@ export async function createDesign(
 
   if (!response.ok) {
     throw new Error(
-      `Failed to create design: ${response.status}`
+      await getApiErrorMessage(
+        response,
+        'Failed to create design'
+      )
     )
   }
 
@@ -112,13 +178,7 @@ export async function createDesign(
 // ==========================================
 // UPDATE EXISTING DESIGN
 // PUT /designs/{designId}
-// SPRINT 9 — TASK 1
 // ==========================================
-
-export type UpdateDesignResponse = {
-  message: string
-  design: SavedDesign
-}
 
 export async function updateDesign(
   designId: number,
@@ -136,20 +196,11 @@ export async function updateDesign(
   )
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(
-        'Design not found. It may have been deleted.'
-      )
-    }
-
-    if (response.status === 422) {
-      throw new Error(
-        'Invalid design details. Please check your selections.'
-      )
-    }
-
     throw new Error(
-      `Failed to update design: ${response.status}`
+      await getApiErrorMessage(
+        response,
+        'Failed to update design'
+      )
     )
   }
 
@@ -166,7 +217,10 @@ export async function getSavedDesigns(): Promise<SavedDesign[]> {
 
   if (!response.ok) {
     throw new Error(
-      `Failed to load saved designs: ${response.status}`
+      await getApiErrorMessage(
+        response,
+        'Failed to load saved designs'
+      )
     )
   }
 
@@ -193,7 +247,10 @@ export async function deleteDesign(
 
   if (!response.ok) {
     throw new Error(
-      `Failed to delete design: ${response.status}`
+      await getApiErrorMessage(
+        response,
+        'Failed to delete design'
+      )
     )
   }
 }
@@ -227,7 +284,10 @@ export async function updateDesignFavorite(
 
   if (!response.ok) {
     throw new Error(
-      `Failed to update favorite: ${response.status}`
+      await getApiErrorMessage(
+        response,
+        'Failed to update favorite'
+      )
     )
   }
 
@@ -235,13 +295,86 @@ export async function updateDesignFavorite(
 }
 
 // ==========================================
+// GET DESIGN VERSION HISTORY
+// GET /designs/{designId}/versions
+// ==========================================
+
+export async function getDesignVersions(
+  designId: number
+): Promise<DesignVersionsResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/designs/${designId}/versions`
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(
+        response,
+        'Failed to load design version history'
+      )
+    )
+  }
+
+  return response.json() as Promise<DesignVersionsResponse>
+}
+
+// ==========================================
+// GET A SPECIFIC DESIGN VERSION
+// GET /designs/{designId}/versions/{versionNumber}
+// ==========================================
+
+export async function getDesignVersion(
+  designId: number,
+  versionNumber: number
+): Promise<DesignVersionResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/designs/${designId}/versions/${versionNumber}`
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(
+        response,
+        'Failed to load design version'
+      )
+    )
+  }
+
+  return response.json() as Promise<DesignVersionResponse>
+}
+
+// ==========================================
+// RESTORE AN EARLIER DESIGN VERSION
+// POST /designs/{designId}/restore/{versionNumber}
+// ==========================================
+
+export async function restoreDesignVersion(
+  designId: number,
+  versionNumber: number
+): Promise<RestoreDesignVersionResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/designs/${designId}/restore/${versionNumber}`,
+    {
+      method: 'POST',
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getApiErrorMessage(
+        response,
+        'Failed to restore design version'
+      )
+    )
+  }
+
+  return response.json() as Promise<RestoreDesignVersionResponse>
+}
+
+// ==========================================
 // FREE FASHION SUGGESTION GENERATOR
 // POST /ai/suggest-design
 // ==========================================
-
-// AI suggestions return only the basic design fields.
-// Size, sleeve length, fit, and fabric pattern
-// are selected in the Design Studio.
 
 export type AIDesignSuggestion = Pick<
   DesignPayload,
@@ -271,7 +404,10 @@ export async function generateDesignSuggestion(
 
   if (!response.ok) {
     throw new Error(
-      `Failed to generate suggestion: ${response.status}`
+      await getApiErrorMessage(
+        response,
+        'Failed to generate suggestion'
+      )
     )
   }
 

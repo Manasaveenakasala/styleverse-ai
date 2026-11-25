@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   createDesign,
@@ -142,6 +142,25 @@ export default function SavedDesigns({
   const [restoringVersion, setRestoringVersion] =
     useState<number | null>(null);
 
+  const historyRequestId = useRef(0);
+
+  // ==========================================
+  // VERSION COMPARISON STATE
+  // Sprint 9 - Task 3
+  // ==========================================
+
+  const [showComparison, setShowComparison] =
+    useState(false);
+
+  const [firstVersionNumber, setFirstVersionNumber] =
+    useState<number | null>(null);
+
+  const [secondVersionNumber, setSecondVersionNumber] =
+    useState<number | null>(null);
+
+  const [showOnlyChanges, setShowOnlyChanges] =
+    useState(false);
+
   // ==========================================
   // SHARE STATE
   // ==========================================
@@ -160,6 +179,12 @@ export default function SavedDesigns({
   const showError = useCallback((message: string) => {
     setFeedback({ type: "error", message });
   }, []);
+
+  const isUpdating =
+    deletingId !== null ||
+    updatingFavoriteId !== null ||
+    duplicatingId !== null ||
+    restoringVersion !== null;
 
   // ==========================================
   // LOAD SAVED DESIGNS
@@ -202,14 +227,32 @@ export default function SavedDesigns({
   }, [refreshKey, retryKey]);
 
   // ==========================================
+  // RESET VERSION COMPARISON
+  // ==========================================
+
+  function resetComparison() {
+    setShowComparison(false);
+    setFirstVersionNumber(null);
+    setSecondVersionNumber(null);
+    setShowOnlyChanges(false);
+  }
+
+  // ==========================================
   // VERSION HISTORY
   // ==========================================
 
   async function handleViewHistory(designId: number) {
+    if (isUpdating) return;
+
+    const requestId = ++historyRequestId.current;
+
+    resetComparison();
+
     if (historyDesignId === designId) {
       setHistoryDesignId(null);
       setHistoryVersions([]);
       setHistoryError("");
+      setHistoryLoading(false);
       return;
     }
 
@@ -220,17 +263,80 @@ export default function SavedDesigns({
 
     try {
       const result = await getDesignVersions(designId);
-      setHistoryVersions(result.versions);
+
+      if (requestId === historyRequestId.current) {
+        setHistoryVersions(result.versions);
+      }
     } catch (error) {
-      setHistoryError(
-        getErrorMessage(
-          error,
-          "Unable to load version history."
-        )
-      );
+      if (requestId === historyRequestId.current) {
+        setHistoryError(
+          getErrorMessage(
+            error,
+            "Unable to load version history."
+          )
+        );
+      }
     } finally {
-      setHistoryLoading(false);
+      if (requestId === historyRequestId.current) {
+        setHistoryLoading(false);
+      }
     }
+  }
+
+  // ==========================================
+  // COMPARE DESIGN VERSIONS
+  // ==========================================
+
+  function handleCompareVersions() {
+    if (historyVersions.length < 2) {
+      showError(
+        "At least two saved versions are required to compare."
+      );
+      return;
+    }
+
+    if (showComparison) {
+      resetComparison();
+      return;
+    }
+
+    setFirstVersionNumber(
+      historyVersions[1].version_number
+    );
+
+    setSecondVersionNumber(
+      historyVersions[0].version_number
+    );
+
+    setShowOnlyChanges(false);
+    setShowComparison(true);
+  }
+
+  const firstVersion = historyVersions.find(
+    (version) =>
+      version.version_number === firstVersionNumber
+  );
+
+  const secondVersion = historyVersions.find(
+    (version) =>
+      version.version_number === secondVersionNumber
+  );
+
+  const changedFields =
+    firstVersion && secondVersion
+      ? VERSION_FIELDS.filter(
+          (field) =>
+            firstVersion[field.key] !==
+            secondVersion[field.key]
+        )
+      : [];
+
+  const unchangedCount =
+    VERSION_FIELDS.length - changedFields.length;
+
+  function handleSwapVersions() {
+    setFirstVersionNumber(secondVersionNumber);
+    setSecondVersionNumber(firstVersionNumber);
   }
 
   // ==========================================
@@ -241,7 +347,7 @@ export default function SavedDesigns({
     designId: number,
     versionNumber: number
   ) {
-    if (restoringVersion !== null) return;
+    if (isUpdating) return;
 
     const confirmed = window.confirm(
       `Restore Design #${designId} to Version ${versionNumber}?\n\n` +
@@ -268,14 +374,23 @@ export default function SavedDesigns({
         )
       );
 
-      const updatedHistory =
-        await getDesignVersions(designId);
-
-      setHistoryVersions(updatedHistory.versions);
-
       showSuccess(
         `Design #${designId} restored from Version ${versionNumber}.`
       );
+
+      try {
+        const updatedHistory =
+          await getDesignVersions(designId);
+
+        setHistoryVersions(updatedHistory.versions);
+      } catch (error) {
+        setHistoryError(
+          getErrorMessage(
+            error,
+            "Design restored, but version history could not be refreshed."
+          )
+        );
+      }
     } catch (error) {
       const message = getErrorMessage(
         error,
@@ -292,12 +407,6 @@ export default function SavedDesigns({
   // ==========================================
   // DUPLICATE DESIGN
   // ==========================================
-
-  const isUpdating =
-    deletingId !== null ||
-    updatingFavoriteId !== null ||
-    duplicatingId !== null ||
-    restoringVersion !== null;
 
   async function handleDuplicateDesign(
     design: SavedDesign
@@ -419,8 +528,14 @@ export default function SavedDesigns({
       );
 
       if (historyDesignId === designId) {
+        historyRequestId.current += 1;
+
         setHistoryDesignId(null);
         setHistoryVersions([]);
+        setHistoryLoading(false);
+        setHistoryError("");
+
+        resetComparison();
       }
 
       showSuccess("Design deleted successfully.");
@@ -441,6 +556,15 @@ export default function SavedDesigns({
   // ==========================================
 
   function handleLoadDesign(design: SavedDesign) {
+    historyRequestId.current += 1;
+
+    setHistoryDesignId(null);
+    setHistoryVersions([]);
+    setHistoryLoading(false);
+    setHistoryError("");
+
+    resetComparison();
+
     onLoadDesign(design);
 
     showSuccess(
@@ -606,7 +730,9 @@ export default function SavedDesigns({
         design.color,
         design.description,
       ].some((value) =>
-        value.toLowerCase().includes(query)
+        String(value ?? "")
+          .toLowerCase()
+          .includes(query)
       );
     })
     .sort((a, b) => {
@@ -632,6 +758,466 @@ export default function SavedDesigns({
   }
 
   // ==========================================
+  // VERSION COMPARISON RENDER HELPER
+  // ==========================================
+
+  function renderVersionComparison() {
+    if (
+      !showComparison ||
+      !firstVersion ||
+      !secondVersion
+    ) {
+      return null;
+    }
+
+    const comparisonFields = showOnlyChanges
+      ? changedFields
+      : VERSION_FIELDS;
+
+    return (
+      <div
+        className="version-comparison-panel"
+        style={{
+          marginTop: "16px",
+          marginBottom: "20px",
+          padding: "16px",
+          border: "1px solid #d8b4fe",
+          borderRadius: "12px",
+          minWidth: 0,
+        }}
+      >
+        <h4
+          style={{
+            marginTop: 0,
+            marginBottom: "8px",
+          }}
+        >
+          Compare Design Versions
+        </h4>
+
+        <p>
+          Select two versions to see what has changed.
+        </p>
+
+        {/* VERSION SELECTORS */}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(2, minmax(0, 1fr))",
+            gap: "12px",
+            marginBottom: "16px",
+          }}
+        >
+          <div>
+            <label
+              htmlFor={`first-version-${historyDesignId}`}
+              style={{
+                display: "block",
+                fontWeight: 600,
+                marginBottom: "6px",
+              }}
+            >
+              First Version
+            </label>
+
+            <select
+              id={`first-version-${historyDesignId}`}
+              value={firstVersionNumber ?? ""}
+              disabled={isUpdating}
+              onChange={(event) =>
+                setFirstVersionNumber(
+                  Number(event.target.value)
+                )
+              }
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+              }}
+            >
+              {historyVersions.map((version) => (
+                <option
+                  key={version.id}
+                  value={version.version_number}
+                  disabled={
+                    version.version_number ===
+                    secondVersionNumber
+                  }
+                >
+                  Version {version.version_number}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor={`second-version-${historyDesignId}`}
+              style={{
+                display: "block",
+                fontWeight: 600,
+                marginBottom: "6px",
+              }}
+            >
+              Second Version
+            </label>
+
+            <select
+              id={`second-version-${historyDesignId}`}
+              value={secondVersionNumber ?? ""}
+              disabled={isUpdating}
+              onChange={(event) =>
+                setSecondVersionNumber(
+                  Number(event.target.value)
+                )
+              }
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+              }}
+            >
+              {historyVersions.map((version) => (
+                <option
+                  key={version.id}
+                  value={version.version_number}
+                  disabled={
+                    version.version_number ===
+                    firstVersionNumber
+                  }
+                >
+                  Version {version.version_number}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* SWAP VERSIONS */}
+
+        <button
+          type="button"
+          className="filter-button"
+          disabled={isUpdating}
+          onClick={handleSwapVersions}
+          style={{
+            marginBottom: "16px",
+          }}
+        >
+          ⇄ Swap Versions
+        </button>
+
+        {/* SIDE-BY-SIDE COLOR PREVIEWS */}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(2, minmax(0, 1fr))",
+            gap: "12px",
+            marginBottom: "16px",
+          }}
+        >
+          {[firstVersion, secondVersion].map(
+            (version) => (
+              <div
+                key={version.id}
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  textAlign: "center",
+                  minWidth: 0,
+                }}
+              >
+                <h5
+                  style={{
+                    marginTop: 0,
+                    marginBottom: "10px",
+                  }}
+                >
+                  Version {version.version_number}
+                </h5>
+
+                <div
+                  role="img"
+                  aria-label={`Version ${version.version_number} color ${version.color}`}
+                  style={{
+                    width: "100%",
+                    height: "90px",
+                    backgroundColor: version.color,
+                    borderRadius: "8px",
+                    border: "1px solid #ccc",
+                  }}
+                />
+
+                <p
+                  style={{
+                    fontWeight: 600,
+                    marginBottom: "4px",
+                  }}
+                >
+                  {version.garment}
+                </p>
+
+                <p
+                  style={{
+                    fontSize: "13px",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {version.color.toUpperCase()}
+                </p>
+
+                <p
+                  style={{
+                    fontSize: "12px",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {version.created_at}
+                </p>
+              </div>
+            )
+          )}
+        </div>
+
+        {/* COMPARISON SUMMARY */}
+
+        <div
+          aria-live="polite"
+          style={{
+            padding: "12px",
+            border: "1px solid #d8b4fe",
+            borderRadius: "8px",
+            marginBottom: "16px",
+          }}
+        >
+          <strong>
+            {changedFields.length} of{" "}
+            {VERSION_FIELDS.length} properties changed
+          </strong>
+
+          <p
+            style={{
+              marginBottom: 0,
+              fontSize: "13px",
+            }}
+          >
+            {unchangedCount} unchanged properties
+          </p>
+
+          {changedFields.length === 0 && (
+            <p>
+              Both versions have identical design
+              properties.
+            </p>
+          )}
+        </div>
+
+        {/* SHOW ONLY CHANGES */}
+
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "16px",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={showOnlyChanges}
+            onChange={(event) =>
+              setShowOnlyChanges(event.target.checked)
+            }
+          />
+
+          Show only changed properties
+        </label>
+
+        {/* COMPARISON TABLE */}
+
+        {comparisonFields.length === 0 ? (
+          <p>No differences between these versions.</p>
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              overflowX: "auto",
+            }}
+          >
+            <table
+              aria-label="Design version comparison"
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "13px",
+                tableLayout: "fixed",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    scope="col"
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 6px",
+                      borderBottom: "2px solid #ddd",
+                    }}
+                  >
+                    Property
+                  </th>
+
+                  <th
+                    scope="col"
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 6px",
+                      borderBottom: "2px solid #ddd",
+                    }}
+                  >
+                    V{firstVersion.version_number}
+                  </th>
+
+                  <th
+                    scope="col"
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 6px",
+                      borderBottom: "2px solid #ddd",
+                    }}
+                  >
+                    V{secondVersion.version_number}
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {comparisonFields.map((field) => {
+                  const firstValue =
+                    firstVersion[field.key];
+
+                  const secondValue =
+                    secondVersion[field.key];
+
+                  const changed =
+                    firstValue !== secondValue;
+
+                  return (
+                    <tr
+                      key={field.key}
+                      style={{
+                        backgroundColor: changed
+                          ? "rgba(168, 85, 247, 0.12)"
+                          : "transparent",
+                      }}
+                    >
+                      <th
+                        scope="row"
+                        style={{
+                          padding: "10px 6px",
+                          textAlign: "left",
+                          verticalAlign: "top",
+                          borderBottom: "1px solid #ddd",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {field.label}
+
+                        {changed && (
+                          <span
+                            style={{
+                              display: "block",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              marginTop: "4px",
+                            }}
+                          >
+                            Changed
+                          </span>
+                        )}
+                      </th>
+
+                      <td
+                        style={{
+                          padding: "10px 6px",
+                          verticalAlign: "top",
+                          borderBottom: "1px solid #ddd",
+                          overflowWrap: "anywhere",
+                          fontWeight: changed ? 600 : 400,
+                        }}
+                      >
+                        {field.key === "color" && (
+                          <div
+                            aria-hidden="true"
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              backgroundColor: firstValue,
+                              border: "1px solid #ccc",
+                              borderRadius: "5px",
+                              marginBottom: "5px",
+                            }}
+                          />
+                        )}
+
+                        {firstValue}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px 6px",
+                          verticalAlign: "top",
+                          borderBottom: "1px solid #ddd",
+                          overflowWrap: "anywhere",
+                          fontWeight: changed ? 600 : 400,
+                        }}
+                      >
+                        {field.key === "color" && (
+                          <div
+                            aria-hidden="true"
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              backgroundColor: secondValue,
+                              border: "1px solid #ccc",
+                              borderRadius: "5px",
+                              marginBottom: "5px",
+                            }}
+                          />
+                        )}
+
+                        {secondValue}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="filter-button"
+          onClick={resetComparison}
+          style={{
+            marginTop: "16px",
+          }}
+        >
+          Close Comparison
+        </button>
+      </div>
+    );
+  }
+
+  // ==========================================
   // VERSION HISTORY RENDER HELPER
   // ==========================================
 
@@ -648,6 +1234,7 @@ export default function SavedDesigns({
           padding: "16px",
           border: "1px solid #ddd",
           borderRadius: "12px",
+          minWidth: 0,
         }}
       >
         <h4>Version History</h4>
@@ -671,6 +1258,50 @@ export default function SavedDesigns({
           historyVersions.length === 0 && (
             <p>No versions available.</p>
           )}
+
+        {/* COMPARE VERSIONS BUTTON */}
+
+        {!historyLoading &&
+          !historyError &&
+          historyVersions.length >= 2 && (
+            <button
+              type="button"
+              className="primary-button"
+              disabled={isUpdating}
+              aria-expanded={showComparison}
+              onClick={handleCompareVersions}
+              style={{
+                marginBottom: "16px",
+                width: "100%",
+              }}
+            >
+              {showComparison
+                ? "Hide Comparison"
+                : "⇄ Compare Versions"}
+            </button>
+          )}
+
+        {!historyLoading &&
+          !historyError &&
+          historyVersions.length === 1 && (
+            <p
+              style={{
+                fontSize: "13px",
+                opacity: 0.8,
+              }}
+            >
+              Save another version of this design to
+              enable version comparison.
+            </p>
+          )}
+
+        {/* VERSION COMPARISON PANEL */}
+
+        {!historyLoading &&
+          !historyError &&
+          renderVersionComparison()}
+
+        {/* VERSION HISTORY CARDS */}
 
         {!historyLoading &&
           historyVersions.map((version, index) => {
@@ -742,10 +1373,7 @@ export default function SavedDesigns({
                 <button
                   type="button"
                   className="primary-button"
-                  disabled={
-                    restoringVersion !== null ||
-                    isUpdating
-                  }
+                  disabled={isUpdating}
                   onClick={() =>
                     void handleRestoreVersion(
                       design.id,
@@ -779,8 +1407,8 @@ export default function SavedDesigns({
         <h2>My Saved Designs</h2>
 
         <p>
-          Explore, duplicate, customize, restore,
-          export, and share your creations.
+          Explore, duplicate, customize, compare,
+          restore, export, and share your creations.
         </p>
       </div>
 
@@ -903,6 +1531,7 @@ export default function SavedDesigns({
             className="studio-spinner"
             aria-hidden="true"
           />
+
           Loading your fashion collection...
         </div>
       )}
@@ -944,6 +1573,7 @@ export default function SavedDesigns({
         designs.length === 0 && (
           <div className="saved-designs-empty">
             <h3>No saved designs yet</h3>
+
             <p>
               Create your first fashion design in
               the studio above.
@@ -957,6 +1587,7 @@ export default function SavedDesigns({
         filteredDesigns.length === 0 && (
           <div className="saved-designs-empty">
             <h3>No matching designs</h3>
+
             <p>
               Try changing your search or filters.
             </p>
@@ -1074,6 +1705,7 @@ export default function SavedDesigns({
                     <button
                       type="button"
                       className="primary-button"
+                      disabled={isUpdating}
                       onClick={() =>
                         handleLoadDesign(design)
                       }
@@ -1101,6 +1733,7 @@ export default function SavedDesigns({
                     <button
                       type="button"
                       className="download-button"
+                      disabled={isUpdating}
                       aria-expanded={
                         historyDesignId === design.id
                       }
